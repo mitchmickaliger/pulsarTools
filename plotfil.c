@@ -10,12 +10,13 @@
 // External function to print help if needed
 int usage() {
   fprintf(stderr, "\nUsage: plotfil_new (-options) fil_file\n\n");
-  fprintf(stderr, "     -g: Output plot type (default = /xs)\n");
   fprintf(stderr, "     -b: Number of time samples to bin (default = 1)\n");
+  fprintf(stderr, "     -c: Either plot channel frequencies (1) or channel indices (2) (default = 1)\n");
   fprintf(stderr, "     -d: DM to dedsiperse before plotting (default = 0)\n");
+  fprintf(stderr, "     -g: Output plot type (default = /xs)\n");
   fprintf(stderr, "     -S: Time at which to begin plotting (default = start of file)\n");
   fprintf(stderr, "     -T: Seconds of data to plot, from start of file or requested start point (default = til end of file)\n");
-  fprintf(stderr, "     -t: Time chunk (in seconds) to plot (default = entire file)\n");
+  fprintf(stderr, "     -t: Time chunk (in seconds) to plot (default = entire file)\n\n");
 }
 
 int main(int argc, char *argv[]) {
@@ -24,7 +25,7 @@ int main(int argc, char *argv[]) {
   char string[80], *header, plottype[LIM] = "/xs";
   unsigned char *buffer;
   int i, nchar = sizeof(int), numBins = 1, numChans = 0, numBits = 0, numIFs = 0, arg, multiPage = 0, sampsRead, *dmDelaySamps;
-  int telescope_id, data_type, machine_id, bit;
+  int telescope_id, data_type, machine_id, bit, channelInfoType = 1;
   unsigned short sixteenBitInt;
   unsigned char charOfValues;
   double obsStart, sampTime, fch1, foff;
@@ -41,19 +42,28 @@ int main(int argc, char *argv[]) {
   }
 
   // Read command line parameters
-  while ((arg = getopt(argc, argv, "b:S:T:d:t:g:")) != -1) {
+  while ((arg = getopt(argc, argv, "b:c:d:g:S:T:t:h")) != -1) {
     switch (arg) {
-
-      case 'g':
-        strcpy(plottype, optarg);
-        break;
 
       case 'b':
         numBins = atoi(optarg);
         break;
 
+      case 'c':
+        channelInfoType = atoi(optarg);
+        if (channelInfoType < 1 || channelInfoType > 2) {
+          fprintf(stderr, "\nYou must either choose to plot channel frequencies (-c 1) or channel indices (-c 2)!\n");
+          usage();
+          exit(0);
+        }
+        break;
+
       case 'd':
         dm = atof(optarg);
+        break;
+
+      case 'g':
+        strcpy(plottype, optarg);
         break;
 
       case 'S':
@@ -70,7 +80,7 @@ int main(int argc, char *argv[]) {
 
       case 'h':
         usage();
-        break;
+        exit(0);
 
       default:
         return 0;
@@ -340,8 +350,13 @@ int main(int argc, char *argv[]) {
   tr[2] = 0.0;
   tr[0] = -0.5 * tr[1];
   tr[4] = 0.0;
-  tr[5] = foff * numChans/(float) numChans;
-  tr[3] = fch1 - 0.5 * tr[5];
+  if (channelInfoType == 1) { // If plotting channel frequencies, center first Y-bin on fch1
+    tr[5] = foff * numChans/(float) numChans;
+    tr[3] = fch1 - 0.5 * tr[5];
+  } else if (channelInfoType == 2) { // If plotting channel indices, center first Y-bin on 0.5
+    tr[5] = 1.0;
+    tr[3] = 0.5;
+  }
 
   // Open selected plot device
   cpgopen(plottype);
@@ -442,10 +457,14 @@ int main(int argc, char *argv[]) {
       cpgpage();
       // Set size of plot window
       cpgsvp(0.1, 0.95, 0.1, 0.95);
-      // Map the plot to the plot window
-      cpgswin(startTime, endTime, freqMin, freqMax);
-      // Label the x- and y-axis; leave the title blank
-      cpglab("Time (s)", "Frequency (MHz)", " ");
+      // Map the plot to the plot window, using either channel frequencies or channel indices
+      if (channelInfoType == 1) {
+        cpgswin(startTime, endTime, freqMin, freqMax);
+        cpglab("Time (s)", "Frequency (MHz)", " "); // Label the x- and y-axis; leave the title blank
+      } else if (channelInfoType == 2) {
+        cpgswin(startTime, endTime, 0, numChans);
+        cpglab("Time (s)", "Channel Number", " "); // Label the x- and y-axis; leave the title blank
+      }
       // Plot the .fil file in the plot window
       cpgimag(data, numXPoints, numChans, 1, numXPoints, 1, numChans, dataMin, dataMax, tr);
       // Place axes on plot
@@ -463,10 +482,14 @@ int main(int argc, char *argv[]) {
       cpgpage();
       // Set size of plot window
       cpgsvp(0.1, 0.95, 0.1, 0.95);
-      // Map the plot to the plot window
-      cpgswin(startTime, endTime, freqMin, freqMax);
-      // Label the x- and y-axis; leave the title blank
-      cpglab("Time (s)", "Frequency (MHz)", " ");
+      // Map the plot to the plot window, using either channel frequencies or channel indices
+      if (channelInfoType == 1) {
+        cpgswin(startTime, endTime, freqMin, freqMax);
+        cpglab("Time (s)", "Frequency (MHz)", " "); // Label the x- and y-axis; leave the title blank
+      } else if (channelInfoType == 2) {
+        cpgswin(startTime, endTime, 0, numChans);
+        cpglab("Time (s)", "Channel Number", " "); // Label the x- and y-axis; leave the title blank
+      }
       // Plot the .fil file in the plot window
       cpgimag(data, numXPoints, numChans, 1, numXPoints, 1, numChans, dataMin, dataMax, tr);
       // Place axes on plot
@@ -479,9 +502,13 @@ int main(int argc, char *argv[]) {
     // Set size of plot window
     cpgsvp(0.1, 0.95, 0.1, 0.95);
     // Map the plot to the plot window
-    cpgswin(minPlotTime, maxPlotTime, freqMin, freqMax);
-    // Label the x- and y-axis; leave the title blank
-    cpglab("Time (s)", "Frequency (MHz)", " ");
+    if (channelInfoType == 1) {
+      cpgswin(minPlotTime, maxPlotTime, freqMin, freqMax);
+      cpglab("Time (s)", "Frequency (MHz)", " "); // Label the x- and y-axis; leave the title blank
+    } else if (channelInfoType == 2) {
+      cpgswin(minPlotTime, maxPlotTime, 0, numChans);
+      cpglab("Time (s)", "Channel Number", " "); // Label the x- and y-axis; leave the title blank
+    }
     // Plot the .fil file in the plot window
     cpgimag(data, numXPoints, numChans, 1, numXPoints, 1, numChans, dataMin, dataMax, tr);
     // Place axes on plot
