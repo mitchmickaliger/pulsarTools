@@ -7,9 +7,15 @@
 
 #define LIM 256
 
+/*
+ Plots the spectrum from a filterbank file, showing either channel frequency vs time or channel index vs time.
+ Will average in time, but not in frequency (yet).
+ Will currently work with 8-bit or 32-bit data. Functionality to plot 1-bit, 2-bit, 4-bit, and 16-bit added, but needs to be tested.
+*/
+
 // External function to print help if needed
 int usage() {
-  fprintf(stderr, "\nUsage: plotfil_new (-options) fil_file\n\n");
+  fprintf(stderr, "\nUsage: plotfil (-options) fil_file\n\n");
   fprintf(stderr, "     -b: Number of time samples to bin (default = 1)\n");
   fprintf(stderr, "     -c: Either plot channel frequencies (1) or channel indices (2) (default = 1)\n");
   fprintf(stderr, "     -d: DM to dedsiperse before plotting (default = 0)\n");
