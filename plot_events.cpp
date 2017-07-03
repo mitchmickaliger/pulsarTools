@@ -23,7 +23,7 @@ void usage() {
 
 int main(int argc, char *argv[]) {
 
-  int arg, bin;
+  int arg;
   float timeMin = 0.0/0.0, timeMax = 0.0/0.0, dmMin = 0.0/0.0, dmMax = 0.0/0.0, snrMin = 0.0/0.0, snrMax = 0.0/0.0, logWidth;
   float timeMinFile = 0.0/0.0, timeMaxFile = 0.0/0.0, dmMinFile = 0.0/0.0, dmMaxFile = 0.0/0.0, snrMinFile = 0.0/0.0, snrMaxFile = 0.0/0.0;
   float line[4];
@@ -194,11 +194,11 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  // Time vs BIN
+  // Time vs Width
   cpgsvp(0.1, 0.8, 0.81, 0.95);
   cpgswin(timeMin, timeMax, -0.1, 8.0);
   cpgbox("BCTS", 0., 0, "BCTSN", 0., 0);
-  cpglab("", "Binsize", " ");
+  cpglab("", "Width (log2 samples)", " ");
 
   for (std::vector<float>::iterator i = SNRs.begin(); i != SNRs.end(); ++i) {
     if (*i > 10) {
