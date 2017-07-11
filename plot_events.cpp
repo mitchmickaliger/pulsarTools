@@ -10,15 +10,15 @@
 #include <algorithm>
 
 void usage() {
-  fprintf(stderr, "Usage: plot_events (-options) -f dm_file\n");
-  fprintf(stderr, "\n     -f: Input .dat file\n");
-  fprintf(stderr, "     -d: Minimum DM to plot\n");
-  fprintf(stderr, "     -D: Maximum DM to plot\n");
-  fprintf(stderr, "     -s: Minimum S/N to plot\n");
-  fprintf(stderr, "     -S: Maximum S/N to plot\n");
-  fprintf(stderr, "     -t: Minimum time to plot\n");
-  fprintf(stderr, "     -T: Maximum time to plot\n");
-  fprintf(stderr, "     -g: Output plot type (default = /xs)\n\n");
+  std::cout << std::endl << "Usage: plot_events (-options) -f dat_file" << std::endl;
+  std::cout << std::endl << "     -f: Input .dat file" << std::endl;
+  std::cout << "     -d: Minimum DM to plot" << std::endl;
+  std::cout << "     -D: Maximum DM to plot" << std::endl;
+  std::cout << "     -s: Minimum S/N to plot" << std::endl;
+  std::cout << "     -S: Maximum S/N to plot" << std::endl;
+  std::cout << "     -t: Minimum time to plot" << std::endl;
+  std::cout << "     -T: Maximum time to plot" << std::endl;
+  std::cout << "     -g: Output plot type (default = /xs)" << std::endl << std::endl;
 }
 
 int main(int argc, char *argv[]) {
@@ -28,10 +28,9 @@ int main(int argc, char *argv[]) {
   float timeMinFile = 0.0/0.0, timeMaxFile = 0.0/0.0, dmMinFile = 0.0/0.0, dmMaxFile = 0.0/0.0, snrMinFile = 0.0/0.0, snrMaxFile = 0.0/0.0;
   float line[4];
   char plotType[128] = "/xs";
-  std::vector<float> DMs, times, SNRs, widths;
   std::ifstream file;
 
-  if (argc < 2) {
+  if (argc < 3) {
     usage();
     exit(0);
   }
@@ -69,7 +68,7 @@ int main(int argc, char *argv[]) {
 
       case 'f':
         file.open(argv[optind - 1], std::ifstream::binary | std::ifstream::ate);
-        if (!file) {
+        if (!file.is_open()) {
           std::cout << "Error opening file " << argv[optind - 1] << std::endl;
           usage();
           exit(0);
@@ -87,13 +86,13 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  if (!file) {
+  if (!file.is_open()) {
     std::cout << "You must input a .dat file with the -f flag!" << std::endl;
     usage();
     exit(0);
   }
 
-  // Skip to the end of the file to determine how many detections there are
+  // The file was opened at the end, so determine how many detections there are
   const size_t numberOfDetections = file.tellg()/sizeof(float)/4.0;
   // Seek back to the beginning of the file
   file.seekg(0, std::ifstream::beg);
@@ -105,6 +104,8 @@ int main(int argc, char *argv[]) {
     return 0;
   }
 
+  std::vector<float> DMs(0, numberOfDetections), times(0, numberOfDetections), SNRs(0, numberOfDetections), widths(0, numberOfDetections);
+
   // Read data from file into vectors
   while (file.read(reinterpret_cast<char*>(&line), sizeof(float) * 4)) {
     DMs.push_back(line[0]);
@@ -112,6 +113,9 @@ int main(int argc, char *argv[]) {
     SNRs.push_back(line[2]);
     widths.push_back(line[3]);
   }
+
+  // Close the file now that we've read its contents
+  file.close();
 
   // Find extrema of time, DM, and SNR from file
   snrMinFile = *std::min_element(SNRs.begin(), SNRs.end());
@@ -149,8 +153,8 @@ int main(int argc, char *argv[]) {
   std::cout << numberOfDetections << " events found:" << std::endl;
   std::cout << "Time: " << timeMin << " " << timeMax << ", DM: " << dmMin << " " << dmMax <<  ", SNR: " << snrMin << " " << snrMax << std::endl;
 
+  // Don't bother plotting if there are no events over 10 sigma
   if (snrMax <= 10) {
-    file.close();
     return 0;
   }
 
@@ -206,8 +210,6 @@ int main(int argc, char *argv[]) {
       cpgpt1(times[std::distance(SNRs.begin(), i)], logWidth, 1);
     }
   }
-
-  file.close();
 
   cpgend();
 
