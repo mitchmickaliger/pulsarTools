@@ -18,14 +18,16 @@ void usage() {
   std::cout << "     -S: Maximum S/N to plot" << std::endl;
   std::cout << "     -t: Minimum time to plot" << std::endl;
   std::cout << "     -T: Maximum time to plot" << std::endl;
+  std::cout << "     -w: Minimum width to plot" << std::endl;
+  std::cout << "     -W: Maximum width to plot" << std::endl;
   std::cout << "     -g: Output plot type (default = /xs)" << std::endl << std::endl;
 }
 
 int main(int argc, char *argv[]) {
 
   int arg;
-  float timeMin = 0.0/0.0, timeMax = 0.0/0.0, dmMin = 0.0/0.0, dmMax = 0.0/0.0, snrMin = 0.0/0.0, snrMax = 0.0/0.0, logWidth;
-  float timeMinFile = 0.0/0.0, timeMaxFile = 0.0/0.0, dmMinFile = 0.0/0.0, dmMaxFile = 0.0/0.0, snrMinFile = 0.0/0.0, snrMaxFile = 0.0/0.0;
+  float timeMin = 0.0/0.0, timeMax = 0.0/0.0, dmMin = 0.0/0.0, dmMax = 0.0/0.0, snrMin = 0.0/0.0, snrMax = 0.0/0.0, widthMin = 0.0/0.0, widthMax = 0.0/0.0, logWidth;
+  float timeMinFile = 0.0/0.0, timeMaxFile = 0.0/0.0, dmMinFile = 0.0/0.0, dmMaxFile = 0.0/0.0, snrMinFile = 0.0/0.0, snrMaxFile = 0.0/0.0, widthMinFile = 0.0/0.0, widthMaxFile = 0.0/0.0;
   float line[4];
   char plotType[128] = "/xs";
   std::ifstream file;
@@ -35,8 +37,17 @@ int main(int argc, char *argv[]) {
     exit(0);
   }
 
-  while ((arg = getopt(argc, argv, "d:D:s:S:t:T:g:f:h")) != -1) {
+  while ((arg = getopt(argc, argv, "d:D:f:g:hs:S:t:T:w:W:")) != -1) {
     switch (arg) {
+
+      case 'f':
+        file.open(argv[optind - 1], std::ifstream::binary | std::ifstream::ate);
+        if (!file.is_open()) {
+          std::cout << "Error opening file " << argv[optind - 1] << std::endl;
+          usage();
+          exit(0);
+        }
+        break;
 
       case 'g':
         strcpy(plotType, optarg);
@@ -66,13 +77,12 @@ int main(int argc, char *argv[]) {
         timeMax = atof(optarg);
         break;
 
-      case 'f':
-        file.open(argv[optind - 1], std::ifstream::binary | std::ifstream::ate);
-        if (!file.is_open()) {
-          std::cout << "Error opening file " << argv[optind - 1] << std::endl;
-          usage();
-          exit(0);
-        }
+      case 'w':
+        widthMin = atof(optarg);
+        break;
+
+      case 'W':
+        widthMax = atof(optarg);
         break;
 
       case 'h':
@@ -124,6 +134,8 @@ int main(int argc, char *argv[]) {
   timeMaxFile = *std::max_element(times.begin(), times.end());
   dmMinFile = *std::min_element(DMs.begin(), DMs.end());
   dmMaxFile = *std::max_element(DMs.begin(), DMs.end());
+  widthMinFile = *std::min_element(widths.begin(), widths.end());
+  widthMaxFile = *std::max_element(widths.begin(), widths.end());
 
   // Check for NaNs; a variable set to NaN will never equal itself
   // If a variable is NaN, it was not given as user input, and should be set given the data in the file
@@ -146,12 +158,18 @@ int main(int argc, char *argv[]) {
   if (snrMax != snrMax) {
     snrMax = snrMaxFile;
   }
+  if (widthMin != widthMin) {
+    widthMin = widthMinFile;
+  }
+  if (widthMax != widthMax) {
+    widthMax = widthMaxFile;
+  }
 
   snrMin = floor(snrMin);
   snrMax = ceil(snrMax);
 
   std::cout << numberOfDetections << " events found:" << std::endl;
-  std::cout << "Time: " << timeMin << " " << timeMax << ", DM: " << dmMin << " " << dmMax <<  ", SNR: " << snrMin << " " << snrMax << std::endl;
+  std::cout << "Time: " << timeMin << " " << timeMax << ", DM: " << dmMin << " " << dmMax <<  ", SNR: " << snrMin << " " << snrMax << ", Width: " << widthMin << " " << widthMax << std::endl;
 
   // Don't bother plotting if there are no events over 10 sigma
   if (snrMax <= 10) {
@@ -200,7 +218,7 @@ int main(int argc, char *argv[]) {
 
   // Time vs Width
   cpgsvp(0.1, 0.8, 0.81, 0.95);
-  cpgswin(timeMin, timeMax, -0.1, 8.0);
+  cpgswin(timeMin, timeMax, log10(widthMin)/log10(2.0), log10(widthMax)/log10(2.0));
   cpgbox("BCTS", 0., 0, "BCTSN", 0., 0);
   cpglab("", "Width (log2 samples)", " ");
 
