@@ -14,7 +14,7 @@
 /*
  Plots the spectrum from a filterbank file, showing either channel frequency vs time or channel index vs time.
  Will average in time, but not in frequency (yet).
- Will currently work with 8-bit or 32-bit data. Functionality to plot 1-bit, 2-bit, 4-bit, and 16-bit added, but needs to be tested.
+ Will work with 1-, 2-, 4-, 8-, 16-, and 32-bit data.
 */
 
 // External function to print help if needed
@@ -34,12 +34,12 @@ void usage() {
 int main(int argc, char *argv[]) {
 
   char string[80], plotType[LIM] = "/xs";
-  int i, nchar = sizeof(int), numBins = 1, numChans = 0, channelsToAdd = 1, numBits = 0, numIFs = 0, arg, multiPage = 0;
+  int i, nchar = sizeof(int), samplesToAdd = 1, numChans = 0, channelsToAdd = 1, numBits = 0, numIFs = 0, arg, multiPage = 0;
   int telescopeID, dataType, machineID, bit, channelInfoType = 1;
   unsigned char charOfValues, eightBitInt;
   unsigned short sixteenBitInt;
   double obsStart, sampTime, fch1, foff;
-  long long numSamples = 0, numSamps = 0, sample, channel, sampleIndex, arrayIndex, numTimePoints, numDataPoints, bin;
+  long long numSamples = 0, numSamps = 0, sample, channel, numTimePoints, numChannels, numDataPointsAdded, bin, inputIndex, outputIndex;
   float dataMin, dataMax, frequency, dm = 0.0, dmDelay;
   float minPlotTime, maxPlotTime, freqMin, freqMax, t0 = -1.0, tl = -1.0, ts = -1.0, startTime, endTime;
   float tr[] = {-0.5, 1.0, 0.0, -0.5, 0.0, 1.0};
@@ -57,10 +57,10 @@ int main(int argc, char *argv[]) {
     switch (arg) {
 
       case 'b':
-        numBins = atoi(optarg);
-        if (numBins < 1) {
+        samplesToAdd = atoi(optarg);
+        if (samplesToAdd < 1) {
           std::cout << "Cannot add less than one time sample together! Defaulting to 1!" << std::endl;
-          numBins = 1;
+          samplesToAdd = 1;
         }
         break;
 
@@ -125,7 +125,7 @@ int main(int argc, char *argv[]) {
     }
   }
 
-
+  // Check if the file has failed to open
   if (!file.is_open()) {
     std::cout << "You must input a .fil file with the -f flag!" << std::endl;
     usage();
@@ -247,6 +247,7 @@ int main(int argc, char *argv[]) {
   std::vector<float> buffer(numSamples * numChans, 0);
 
     // Determine the bit width of the data and read them in appropriately
+    // Data are read in as they are stored in the filterbank file, i.e. tsamp_1_chan_1, tsamp_1_chan_2, ..., tsamp_1_chan_N, tsamp_2_chan_1, ...
     switch (numBits) {
   
       // 1-bit data
@@ -282,7 +283,7 @@ int main(int argc, char *argv[]) {
           } else {
             // Perform bitwise 'AND' operations to pull out the correct two bits for each value
             // Shift the bits to the lowest two bits so they are read as floats properly
-            buffer[i] = (float) (charOfValues & 3);            /* 3 =   00000011 in binary */
+            buffer[i] = (float) (charOfValues & 3);                /* 3 =   00000011 in binary */
             buffer[i + 1] = (float) ((charOfValues & 12) >> 2);    /* 12 =  00001100 in binary */
             buffer[i + 2] = (float) ((charOfValues & 48) >> 4);    /* 48 =  00110000 in binary */
             buffer[i + 3] = (float) ((charOfValues & 192) >> 6);   /* 192 = 11000000 in binary */
@@ -301,7 +302,7 @@ int main(int argc, char *argv[]) {
           } else {
             // Perform bitwise 'AND' operations to pull out the correct four bits for each value
             // Shift the bits to the lowest four bits so they are read as floats properly
-            buffer[i] = (float) (charOfValues & 15);         /* 15 =  00001111 in binary */
+            buffer[i] = (float) (charOfValues & 15);             /* 15 =  00001111 in binary */
             buffer[i + 1] = (float) ((charOfValues & 240) >> 4); /* 240 = 11110000 in binary */
           }
         }
@@ -351,40 +352,60 @@ int main(int argc, char *argv[]) {
   // Close file
   file.close();
 
-  // Compute dispersion shifts for each channel
+  // Create a zero-filled vector of delays in time samples for each channel
   std::vector<int> dmDelaySamps(numChans, 0);
-  for (channel = 0; channel < numChans; channel++) {
-    frequency = fch1 + (float) channel * foff;
-    dmDelay = 4.148808e3 * (pow(frequency, -2) - pow(fch1, -2)) * dm;
-    dmDelaySamps[channel] = (int) floor(dmDelay/sampTime + 0.5);
+  // Compute dispersion shifts for each channel if the DM is not zero; otherwise the above zero-filled vector is already correct
+  if (dm > 0.0) {
+    for (channel = 0; channel < numChans; channel++) {
+      frequency = fch1 + (float) channel * foff;
+      dmDelay = 4.148808e3 * (pow(frequency, -2) - pow(fch1, -2)) * dm;
+      dmDelaySamps[channel] = (int) floor(dmDelay/sampTime + 0.5);
+    }
   }
 
   // Calculate the number of points in time that will be plotted. This number will differ from the number of time samples only if the -b option is used to bin the data in time.
-  numTimePoints = (long long) ((float) numSamples/(float) numBins);
-  std::vector<float> data(numTimePoints * numChans, 0);
+  numTimePoints = (long long) ((float) numSamples/(float) samplesToAdd);
+  // calculate the number of points in frequency that will be plotted. This number will differ from the number of channels only if the -C option is used to bin the data in frequency.
+  numChannels = (long long) ((float) numChans/(float) channelsToAdd);
+  std::vector<float> data(numTimePoints * numChannels, 0);
 
-  // Fill floating point buffer
+  // Read the data into a vector, adding time samples and/or channels and dedispersing if required
+  // Note that the data are corner-turned here, which is necessary for pgplot. This puts them into the data vector as tsamp_1_chan_1, tsamp_2_chan_1, ..., tsamp_N_chan_1, tsamp_1_chan_2, ...
   for (sample = 0; sample < numTimePoints; sample++) {
-    for (channel = 0; channel < numChans; channel++) {
-      // Calculate the data index based on the current sample and channel
-      sampleIndex = sample + numTimePoints * channel;
-      // Initialize the data at this sample to zero. We need to do this as we only ever add to this variable.
-      data[sampleIndex] = 0.0;
-      // Count the number of data points added. Will only differ from one if binning with the -b flag.
-      numDataPoints = 0;
-      // Add 'numBins' points together into one data point
-      for (bin = 0; bin < numBins; bin++) {
-        arrayIndex = (numChans * (numBins * sample + bin + dmDelaySamps[channel]) + channel);
-        if (arrayIndex >= numChans * numSamples || arrayIndex < 0) {
+    for (channel = 0; channel < numChannels; channel++) {
+
+      // Calculate the output index based on the current input sample and channel
+      outputIndex = sample + numTimePoints * channel;
+
+      // Count the number of data points added so we can normalize later
+      // Will only differ from 1 if binning with the -b or -C flags
+      numDataPointsAdded = 0;
+/*
+      // Dedisperse and, if requested, add 'channelsToAdd' channels together
+      for (bin = 0; bin < channelsToAdd; bin++) {
+        inputIndex = numTimePoints * (channelsToAdd * channel + bin) + sample;
+        if (inputIndex >= numChannels * numSamples || inputIndex < 0) {
           continue;
         }
-        data[sampleIndex] += buffer[arrayIndex];
-        numDataPoints++;
+        data[outputIndex] += buffer[inputIndex];
+        numDataPointsAdded++;
       }
+*/
+      // Add 'samplesToAdd' time samples together
+      for (bin = 0; bin < samplesToAdd; bin++) {
+        inputIndex = numChannels * (samplesToAdd * sample + bin + dmDelaySamps[channel]) + channel;
+        if (inputIndex >= numChannels * numSamples || inputIndex < 0) {
+          continue;
+        }
+        data[outputIndex] += buffer[inputIndex];
+        numDataPointsAdded++;
+      }
+
       // Normalize the data point based on the number of points added
-      if (data[sampleIndex] != 0) {
-        data[sampleIndex] /= (float) numDataPoints;
+      if (data[outputIndex] != 0) {
+        data[outputIndex] /= (float) numDataPointsAdded;
       }
+
     }
   }
 
@@ -398,7 +419,7 @@ int main(int argc, char *argv[]) {
   tr[0] = -0.5 * tr[1];
   tr[4] = 0.0;
   if (channelInfoType == 1) { // If plotting channel frequencies, center first Y-bin on fch1
-    tr[5] = foff * numChans/(float) numChans;
+    tr[5] = foff * numChannels/(float) numChannels;
     tr[3] = fch1 - 0.5 * tr[5];
   } else if (channelInfoType == 2) { // If plotting channel indices, center first Y-bin on 0.5
     tr[5] = 1.0;
@@ -413,7 +434,7 @@ int main(int argc, char *argv[]) {
 
   // Compute plotting limits
   freqMin = fch1;
-  freqMax = fch1 + numChans * foff;
+  freqMax = fch1 + numChannels * foff;
 
   // User wants to see entire contents of file on one page
   if (ts < 0.0 && t0 < 0.0 && tl < 0.0) {
@@ -510,11 +531,11 @@ int main(int argc, char *argv[]) {
         cpgswin(startTime, endTime, freqMin, freqMax);
         cpglab("Time (s)", "Frequency (MHz)", " "); // Label the x- and y-axis; leave the title blank
       } else if (channelInfoType == 2) {
-        cpgswin(startTime, endTime, 0, numChans);
+        cpgswin(startTime, endTime, 0, numChannels);
         cpglab("Time (s)", "Channel Number", " "); // Label the x- and y-axis; leave the title blank
       }
       // Plot the .fil file in the plot window
-      cpgimag(&data[0], numTimePoints, numChans, 1, numTimePoints, 1, numChans, dataMin, dataMax, tr);
+      cpgimag(&data[0], numTimePoints, numChannels, 1, numTimePoints, 1, numChannels, dataMin, dataMax, tr);
       // Place axes on plot
       cpgbox("BCTSNI", 0., 0, "BCTSNI", 0., 0);
   
@@ -535,11 +556,11 @@ int main(int argc, char *argv[]) {
         cpgswin(startTime, endTime, freqMin, freqMax);
         cpglab("Time (s)", "Frequency (MHz)", " "); // Label the x- and y-axis; leave the title blank
       } else if (channelInfoType == 2) {
-        cpgswin(startTime, endTime, 0, numChans);
+        cpgswin(startTime, endTime, 0, numChannels);
         cpglab("Time (s)", "Channel Number", " "); // Label the x- and y-axis; leave the title blank
       }
       // Plot the .fil file in the plot window
-      cpgimag(&data[0], numTimePoints, numChans, 1, numTimePoints, 1, numChans, dataMin, dataMax, tr);
+      cpgimag(&data[0], numTimePoints, numChannels, 1, numTimePoints, 1, numChannels, dataMin, dataMax, tr);
       // Place axes on plot
       cpgbox("BCTSNI", 0., 0, "BCTSNI", 0., 0);
 
@@ -554,11 +575,11 @@ int main(int argc, char *argv[]) {
       cpgswin(minPlotTime, maxPlotTime, freqMin, freqMax);
       cpglab("Time (s)", "Frequency (MHz)", " "); // Label the x- and y-axis; leave the title blank
     } else if (channelInfoType == 2) {
-      cpgswin(minPlotTime, maxPlotTime, 0, numChans);
+      cpgswin(minPlotTime, maxPlotTime, 0, numChannels);
       cpglab("Time (s)", "Channel Number", " "); // Label the x- and y-axis; leave the title blank
     }
     // Plot the .fil file in the plot window
-    cpgimag(&data[0], numTimePoints, numChans, 1, numTimePoints, 1, numChans, dataMin, dataMax, tr);
+    cpgimag(&data[0], numTimePoints, numChannels, 1, numTimePoints, 1, numChannels, dataMin, dataMax, tr);
     // Place axes on plot
     cpgbox("BCTSNI", 0., 0, "BCTSNI", 0., 0);
   }
