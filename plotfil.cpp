@@ -233,6 +233,8 @@ int main(int argc, char *argv[]) {
         std::cout << "Did not read header parameter 'data_type' properly!" << std::endl;
         exit(0);
       }
+    } else {
+      std::cout << "Unknown header parameter " << string << std::endl;
     }
 
   }
