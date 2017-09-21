@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
   int telescopeID, dataType, machineID, bit, channelInfoType = 1;
   unsigned char charOfValues, eightBitInt;
   unsigned short sixteenBitInt;
-  double obsStart, sampTime, fch1, foff;
+  double obsStart, sampTime, fCh1, fOff;
   long long numSamples = 0, numSamps = 0, sample, channel, numTimePoints, numChannels, numDataPointsAdded, bin, inputIndex, outputIndex;
   float dataMin, dataMax, frequency, dm = 0.0, dmDelay;
   float minPlotTime, maxPlotTime, freqMin, freqMax, t0 = -1.0, tl = -1.0, ts = -1.0, startTime, endTime;
@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
       case 'b':
         samplesToAdd = atoi(optarg);
         if (samplesToAdd < 1) {
-          std::cout << "Cannot add less than one time sample together! Defaulting to 1!" << std::endl;
+          std::cerr << "Cannot add less than one time sample together! Defaulting to 1!" << std::endl;
           samplesToAdd = 1;
         }
         break;
@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
       case 'c':
         channelInfoType = atoi(optarg);
         if (channelInfoType < 1 || channelInfoType > 2) {
-          std::cout << std::endl << "You must either choose to plot channel frequencies (-c 1) or channel indices (-c 2)!" << std::endl;
+          std::cerr << std::endl << "You must either choose to plot channel frequencies (-c 1) or channel indices (-c 2)!" << std::endl;
           usage();
           exit(0);
         }
@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
       case 'C':
         channelsToAdd = atoi(optarg);
         if (channelsToAdd < 1) {
-          std::cout << "Cannot add less than one channel together! Defaulting to 1!" << std::endl;
+          std::cerr << "Cannot add less than one channel together! Defaulting to 1!" << std::endl;
           channelsToAdd = 1;
         }
         break;
@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
       case 'd':
         dm = atof(optarg);
         if (dm < 0) {
-          std::cout << "DM cannot be negative! Defaulting to 0!" << std::endl;
+          std::cerr << "DM cannot be negative! Defaulting to 0!" << std::endl;
           dm = 0.0;
         }
         break;
@@ -108,7 +108,7 @@ int main(int argc, char *argv[]) {
       case 'f':
         file.open(argv[optind - 1], std::ifstream::binary | std::ifstream::ate);
         if (!file.is_open()) {
-          std::cout << "Error opening file " << argv[optind - 1] << std::endl;
+          std::cerr << "Error opening file " << argv[optind - 1] << std::endl;
           usage();
           exit(0);
         }
@@ -127,7 +127,7 @@ int main(int argc, char *argv[]) {
 
   // Check if the file has failed to open
   if (!file.is_open()) {
-    std::cout << "You must input a .fil file with the -f flag!" << std::endl;
+    std::cerr << "You must input a .fil file with the -f flag!" << std::endl;
     usage();
     exit(0);
   }
@@ -144,7 +144,7 @@ int main(int argc, char *argv[]) {
     strcpy(string, "ERROR");
     file.read((char*) &nchar, sizeof(int));
     if (!file) {
-      std::cout << "Error reading header string size!" << std::endl;
+      std::cerr << "Error reading header string size!" << std::endl;
       exit(0);
     }
 
@@ -156,7 +156,7 @@ int main(int argc, char *argv[]) {
     // Read string
     file.read((char*) string, nchar);
     if (!file) {
-      std::cout << "Could not read header string!" << std::endl;
+      std::cerr << "Could not read header string!" << std::endl;
       exit(0);
     }
     string[nchar] = '\0';
@@ -170,71 +170,71 @@ int main(int argc, char *argv[]) {
     if (strcmp(string, "tsamp") == 0) {
       file.read((char*) &sampTime, sizeof(double));
       if (!file) {
-        std::cout << "Did not read header parameter 'tsamp' properly!" << std::endl;
+        std::cerr << "Did not read header parameter 'tsamp' properly!" << std::endl;
         exit(0);
       }
     } else if (strcmp(string, "tstart") == 0) {
       file.read((char*) &obsStart, sizeof(double));
       if (!file) {
-        std::cout << "Did not read header parameter 'tstart' properly!" << std::endl;
+        std::cerr << "Did not read header parameter 'tstart' properly!" << std::endl;
         exit(0);
       }
     } else if (strcmp(string, "fch1") == 0) {
-      file.read((char*) &fch1, sizeof(double));
+      file.read((char*) &fCh1, sizeof(double));
       if (!file) {
-        std::cout << "Did not read header parameter 'fch1' properly!" << std::endl;
+        std::cerr << "Did not read header parameter 'fch1' properly!" << std::endl;
         exit(0);
       }
     } else if (strcmp(string, "foff") == 0) {
-      file.read((char*) &foff, sizeof(double));
+      file.read((char*) &fOff, sizeof(double));
       if (!file) {
-        std::cout << "Did not read header parameter 'foff' properly!" << std::endl;
+        std::cerr << "Did not read header parameter 'foff' properly!" << std::endl;
         exit(0);
       }
     } else if (strcmp(string, "nchans") == 0) {
       file.read((char*) &numChans, sizeof(int));
       if (!file) {
-        std::cout << "Did not read header parameter 'nchans' properly!" << std::endl;
+        std::cerr << "Did not read header parameter 'nchans' properly!" << std::endl;
         exit(0);
       }
     } else if (strcmp(string, "nifs") == 0) {
       file.read((char*) &numIFs, sizeof(int));
       if (!file) {
-        std::cout << "Did not read header parameter 'nifs' properly!" << std::endl;
+        std::cerr << "Did not read header parameter 'nifs' properly!" << std::endl;
         exit(0);
       }
     } else if (strcmp(string, "nbits") == 0) {
       file.read((char*) &numBits, sizeof(int));
       if (!file) {
-        std::cout << "Did not read header parameter 'nbits' properly!" << std::endl;
+        std::cerr << "Did not read header parameter 'nbits' properly!" << std::endl;
         exit(0);
       }
     } else if (strcmp(string, "nsamples") == 0) {
       file.read((char*) &numSamps, sizeof(long long));
       if (!file) {
-        std::cout << "Did not read header parameter 'nsamples' properly!" << std::endl;
+        std::cerr << "Did not read header parameter 'nsamples' properly!" << std::endl;
         exit(0);
       }
     } else if (strcmp(string, "machine_id") == 0) {
       file.read((char*) &machineID, sizeof(int));
       if (!file) {
-        std::cout << "Did not read header parameter 'machine_id' properly!" << std::endl;
+        std::cerr << "Did not read header parameter 'machine_id' properly!" << std::endl;
         exit(0);
       }
     } else if (strcmp(string, "telescope_id") == 0) {
       file.read((char*) &telescopeID, sizeof(int));
       if (!file) {
-        std::cout << "Did not read header parameter 'telescope_id' properly!" << std::endl;
+        std::cerr << "Did not read header parameter 'telescope_id' properly!" << std::endl;
         exit(0);
       }
     } else if (strcmp(string, "data_type") == 0) {
       file.read((char*) &dataType, sizeof(int));
       if (!file) {
-        std::cout << "Did not read header parameter 'data_type' properly!" << std::endl;
+        std::cerr << "Did not read header parameter 'data_type' properly!" << std::endl;
         exit(0);
       }
     } else {
-      std::cout << "Unknown header parameter " << string << std::endl;
+      std::cerr << "Unknown header parameter " << string << std::endl;
     }
 
   }
@@ -248,108 +248,108 @@ int main(int argc, char *argv[]) {
   // Instantiate a zero-filled vector to hold the data
   std::vector<float> buffer(numSamples * numChans, 0);
 
-    // Determine the bit width of the data and read them in appropriately
-    // Data are read in as they are stored in the filterbank file, i.e. tsamp_1_chan_1, tsamp_1_chan_2, ..., tsamp_1_chan_N, tsamp_2_chan_1, ...
-    switch (numBits) {
-  
-      // 1-bit data
-      case 1:
-        for (i = 0; i < numSamples * numChans; i += 8) {
-          // Read one byte of data (eight 1-bit values) from the input file
-          file.read((char*) &charOfValues, sizeof(unsigned char));
-          if (!file) {
-            std::cout << "Could not read 1-bit values properly!" << std::endl;
-            exit(0);
-          } else {
-            // One byte contains eight data values, so read each separately
-            // Data are stored with the first value in the lowest bit, i.e. the right-most bit
-            for (bit = 0; bit < 8; bit++) {
-              // Perform a bitwise 'AND' operation between variable 'charOfValues' and decimal 1 (00000001 in binary)
-              // This will return the value of the right-most bit of 'charOfValues'
-              buffer[i + bit] = charOfValues & 1;
-              // Shift the bits in variable 'charOfValues' one to the right
-              charOfValues >>= 1;
-            }
-          }
-        }
-        break;
+  // Determine the bit width of the data and read them in appropriately
+  // Data are read in as they are stored in the filterbank file, i.e. tsamp_1_chan_1, tsamp_1_chan_2, ..., tsamp_1_chan_N, tsamp_2_chan_1, ...
+  switch (numBits) {
 
-      // 2-bit data
-      case 2:
-        for (i = 0; i < numSamples * numChans; i += 4) {
-          // Read one byte of data (four 2-bit values) from the input file
-          file.read((char*) &charOfValues, sizeof(unsigned char));
-          if (!file) {
-            std::cout << "Could not read 2-bit values properly!" << std::endl;
-            exit(0);
-          } else {
-            // Perform bitwise 'AND' operations to pull out the correct two bits for each value
-            // Shift the bits to the lowest two bits so they are read as floats properly
-            buffer[i] = (float) (charOfValues & 3);                /* 3 =   00000011 in binary */
-            buffer[i + 1] = (float) ((charOfValues & 12) >> 2);    /* 12 =  00001100 in binary */
-            buffer[i + 2] = (float) ((charOfValues & 48) >> 4);    /* 48 =  00110000 in binary */
-            buffer[i + 3] = (float) ((charOfValues & 192) >> 6);   /* 192 = 11000000 in binary */
-          }
-        }
-        break;
-
-      // 4-bit data
-      case 4:
-         for (i = 0; i < numSamples * numChans; i += 2) {
-          // Read one byte of data (2 4-bit values) from the input file
-          file.read((char*) &charOfValues, sizeof(unsigned char));
-          if (!file) {
-            std::cout << "Could not read 4-bit values properly!" << std::endl;
-            exit(0);
-          } else {
-            // Perform bitwise 'AND' operations to pull out the correct four bits for each value
-            // Shift the bits to the lowest four bits so they are read as floats properly
-            buffer[i] = (float) (charOfValues & 15);             /* 15 =  00001111 in binary */
-            buffer[i + 1] = (float) ((charOfValues & 240) >> 4); /* 240 = 11110000 in binary */
-          }
-        }
-        break;
-
-      // 8-bit data
-      case 8:
-        for (i = 0; i < numSamples * numChans; i++) {
-          file.read((char*) &eightBitInt, sizeof(unsigned char));
-          if (!file) {
-            std::cout << "Could not read 8-bit data properly!" << std::endl;
-            exit(0);
-          } else {
-            buffer[i] = (float) eightBitInt;
-          }
-        }
-        break;
-  
-      // 16-bit data
-      case 16:
-        for (i = 0; i < numSamples * numChans; i++) {
-          file.read((char*) &sixteenBitInt, sizeof(unsigned short));
-          if (!file) {
-            std::cout << "Could not read 16-bit data properly!" << std::endl;
-            exit(0);
-          } else {
-            buffer[i] = (float) sixteenBitInt;
-          }
-        }
-        break;
-
-      // 32-bit data
-      case 32:
-        file.read((char*) &buffer[0], sizeof(float) * numSamples * numChans);
+    // 1-bit data
+    case 1:
+      for (i = 0; i < numSamples * numChans; i += 8) {
+        // Read one byte of data (eight 1-bit values) from the input file
+        file.read((char*) &charOfValues, sizeof(unsigned char));
         if (!file) {
-          std::cout << "Could not read 32-bit data properly!" << std::endl;
+          std::cerr << "Could not read 1-bit values properly!" << std::endl;
           exit(0);
+        } else {
+          // One byte contains eight data values, so read each separately
+          // Data are stored with the first value in the lowest bit, i.e. the right-most bit
+          for (bit = 0; bit < 8; bit++) {
+            // Perform a bitwise 'AND' operation between variable 'charOfValues' and decimal 1 (00000001 in binary)
+            // This will return the value of the right-most bit of 'charOfValues'
+            buffer[i + bit] = charOfValues & 1;
+            // Shift the bits in variable 'charOfValues' one to the right
+            charOfValues >>= 1;
+          }
         }
-        break;
+      }
+      break;
 
-      default:
-        std::cout << "Cannot read " << numBits << " bit data!" << std::endl << "Data must be 1-, 2-, 4-, 8-, 16-, or 32-bit!" << std::endl;
+    // 2-bit data
+    case 2:
+      for (i = 0; i < numSamples * numChans; i += 4) {
+        // Read one byte of data (four 2-bit values) from the input file
+        file.read((char*) &charOfValues, sizeof(unsigned char));
+        if (!file) {
+          std::cerr << "Could not read 2-bit values properly!" << std::endl;
+          exit(0);
+        } else {
+          // Perform bitwise 'AND' operations to pull out the correct two bits for each value
+          // Shift the bits to the lowest two bits so they are read as floats properly
+          buffer[i] = (float) (charOfValues & 3);                /* 3 =   00000011 in binary */
+          buffer[i + 1] = (float) ((charOfValues & 12) >> 2);    /* 12 =  00001100 in binary */
+          buffer[i + 2] = (float) ((charOfValues & 48) >> 4);    /* 48 =  00110000 in binary */
+          buffer[i + 3] = (float) ((charOfValues & 192) >> 6);   /* 192 = 11000000 in binary */
+        }
+      }
+      break;
+
+    // 4-bit data
+    case 4:
+       for (i = 0; i < numSamples * numChans; i += 2) {
+        // Read one byte of data (2 4-bit values) from the input file
+        file.read((char*) &charOfValues, sizeof(unsigned char));
+        if (!file) {
+          std::cerr << "Could not read 4-bit values properly!" << std::endl;
+          exit(0);
+        } else {
+          // Perform bitwise 'AND' operations to pull out the correct four bits for each value
+          // Shift the bits to the lowest four bits so they are read as floats properly
+          buffer[i] = (float) (charOfValues & 15);             /* 15 =  00001111 in binary */
+          buffer[i + 1] = (float) ((charOfValues & 240) >> 4); /* 240 = 11110000 in binary */
+        }
+      }
+      break;
+
+    // 8-bit data
+    case 8:
+      for (i = 0; i < numSamples * numChans; i++) {
+        file.read((char*) &eightBitInt, sizeof(unsigned char));
+        if (!file) {
+          std::cerr << "Could not read 8-bit data properly!" << std::endl;
+          exit(0);
+        } else {
+          buffer[i] = (float) eightBitInt;
+        }
+      }
+      break;
+
+    // 16-bit data
+    case 16:
+      for (i = 0; i < numSamples * numChans; i++) {
+        file.read((char*) &sixteenBitInt, sizeof(unsigned short));
+        if (!file) {
+          std::cerr << "Could not read 16-bit data properly!" << std::endl;
+          exit(0);
+        } else {
+          buffer[i] = (float) sixteenBitInt;
+        }
+      }
+      break;
+
+    // 32-bit data
+    case 32:
+      file.read((char*) &buffer[0], sizeof(float) * numSamples * numChans);
+      if (!file) {
+        std::cerr << "Could not read 32-bit data properly!" << std::endl;
         exit(0);
+      }
+      break;
 
-    }
+    default:
+      std::cerr << "Cannot read " << numBits << " bit data!" << std::endl << "Data must be 1-, 2-, 4-, 8-, 16-, or 32-bit!" << std::endl;
+      exit(0);
+
+  }
 
   // Close file
   file.close();
@@ -359,8 +359,8 @@ int main(int argc, char *argv[]) {
   // Compute dispersion shifts for each channel if the DM is not zero; otherwise the above zero-filled vector is already correct
   if (dm > 0.0) {
     for (channel = 0; channel < numChans; channel++) {
-      frequency = fch1 + (float) channel * foff;
-      dmDelay = 4.148808e3 * (pow(frequency, -2) - pow(fch1, -2)) * dm;
+      frequency = fCh1 + (float) channel * fOff;
+      dmDelay = 4.148808e3 * (pow(frequency, -2) - pow(fCh1, -2)) * dm;
       dmDelaySamps[channel] = (int) floor(dmDelay/sampTime + 0.5);
     }
   }
@@ -420,9 +420,9 @@ int main(int argc, char *argv[]) {
   tr[2] = 0.0;
   tr[0] = -0.5 * tr[1];
   tr[4] = 0.0;
-  if (channelInfoType == 1) { // If plotting channel frequencies, center first Y-bin on fch1
-    tr[5] = foff * numChannels/(float) numChannels;
-    tr[3] = fch1 - 0.5 * tr[5];
+  if (channelInfoType == 1) { // If plotting channel frequencies, center first Y-bin on fCh1
+    tr[5] = fOff * numChannels/(float) numChannels;
+    tr[3] = fCh1 - 0.5 * tr[5];
   } else if (channelInfoType == 2) { // If plotting channel indices, center first Y-bin on 0.5
     tr[5] = 1.0;
     tr[3] = 0.5;
@@ -435,8 +435,8 @@ int main(int argc, char *argv[]) {
   cpgctab(heat_l, heat_r, heat_g, heat_b, 5, 1.0, 0.5);
 
   // Compute plotting limits
-  freqMin = fch1;
-  freqMax = fch1 + numChannels * foff;
+  freqMin = fCh1;
+  freqMax = fCh1 + numChannels * fOff;
 
   // User wants to see entire contents of file on one page
   if (ts < 0.0 && t0 < 0.0 && tl < 0.0) {

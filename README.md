@@ -21,7 +21,7 @@ Here is an example of my makefile:
 ```
 #Compiling flags
 CFLAGS = -O3 -I/path/to/cpgplot.h
-CPPFLAGS = -O3 -I/path/to/cpgplot.h -lgfortran
+CPPFLAGS = -O3 -I/path/to/cpgploth.
 
 #Linking flags
 LFLAGS = -L/path/to/pgplot/libraries -lcpgplot -lpgplot -L/path/to/X11/libraries -lX11 -fno-backslash -lpng -lstdc++ -lm

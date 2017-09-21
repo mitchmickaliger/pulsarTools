@@ -20,7 +20,7 @@ void usage() {
   std::cout << "     -d: Match factor for DM comparison (default = 0.1)" << std::endl;
   std::cout << "     -H: Maximum harmonic ratio to search (default = 8)" << std::endl;
   std::cout << "     -p: Match factor for period comparison (default = 0.001)" << std::endl << std::endl;
-  std::cout << "If -H is given as 3, say, the code will search for periods that have harmonic ratios of 1/1, 2/1, 2/2, 3/1, 3/2, 3/3." << std::endl;
+  std::cout << "If -H is given as 3, say, the code will search for periods that have harmonic ratios of 1/1, 2/1, 2/2, 3/1, 3/2, 3/3." << std::endl << std::endl;
   std::cout << "The match factors work as follows:" << std::endl << std::endl;
   std::cout << "  When periods are compared, they may have a ratio of 3.999. In this case, one is most likely the fourth harmonic of the other, " << std::endl;
   std::cout << "  but a straight comparison will not identify them as such. The period match factor is multiplied by the harmonic ratio being " << std::endl;
