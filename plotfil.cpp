@@ -11,15 +11,9 @@
 
 #define LIM 256
 
-/*
- Plots the spectrum from a filterbank file, showing either channel frequency vs time or channel index vs time.
- Will average in time, but not in frequency (yet).
- Will work with 1-, 2-, 4-, 8-, 16-, and 32-bit data.
-*/
-
 // External function to print help if needed
 void usage() {
-  std::cout << std::endl << "Usage: plotfil (-options) -f fil_file" << std::endl << std::endl;
+  std::cout << std::endl << "Usage: plotFil (-options) -f fil_file" << std::endl << std::endl;
   std::cout << std::endl << "     -f: Input .fil file" << std::endl;
   std::cout << "     -b: Number of time samples to bin (default = 1)" << std::endl;
   std::cout << "     -c: Either plot channel frequencies (1) or channel indices (2) (default = 1)" << std::endl;
@@ -31,6 +25,11 @@ void usage() {
   std::cout << "     -t: Time chunk (in seconds) to plot (default = entire file)" << std::endl << std::endl;
 }
 
+/* -- plotFil ----------------------------------------------------------------------------------------------------
+** Plots the spectrum from a filterbank file, showing either channel frequency vs time or channel index vs time. |
+** Will average in time, but not in frequency (yet).                                                             |
+** Will work with 1-, 2-, 4-, 8-, 16-, and 32-bit data.                                                          |
+--------------------------------------------------------------------------------------------------------------- */
 int main(int argc, char *argv[]) {
 
   char string[80], plotType[LIM] = "/xs";

@@ -9,8 +9,9 @@
 #include <vector>
 #include <algorithm>
 
+// External function to print help if needed
 void usage() {
-  std::cout << std::endl << "Usage: plot_events (-options) -f dat_file" << std::endl;
+  std::cout << std::endl << "Usage: plotEvents (-options) -f dat_file" << std::endl;
   std::cout << std::endl << "     -f: Input .dat file" << std::endl;
   std::cout << "     -d: Minimum DM to plot" << std::endl;
   std::cout << "     -D: Maximum DM to plot" << std::endl;
@@ -23,6 +24,11 @@ void usage() {
   std::cout << "     -g: Output plot type (default = /xs)" << std::endl << std::endl;
 }
 
+/* -- plotEvents -----------------------------------------------------------------------------------------------------------------
+** Plots events detected from a single-pulse/FRB search.                                                                         |
+**                                                                                                                               |
+** This code expects binary output from astro-accelerate, specifically, but can be used on any binary file with the same format. |
+------------------------------------------------------------------------------------------------------------------------------- */
 int main(int argc, char *argv[]) {
 
   int arg;
@@ -114,6 +120,7 @@ int main(int argc, char *argv[]) {
     return 0;
   }
 
+  // Create vectors to hold separate parameters for each event
   std::vector<float> DMs(0, numberOfDetections), times(0, numberOfDetections), SNRs(0, numberOfDetections), widths(0, numberOfDetections);
 
   // Read data from file into vectors
@@ -127,7 +134,7 @@ int main(int argc, char *argv[]) {
   // Close the file now that we've read its contents
   file.close();
 
-  // Find extrema of time, DM, and SNR from file
+  // Find extrema of time, DM, SNR, and width from file
   snrMinFile = *std::min_element(SNRs.begin(), SNRs.end());
   snrMaxFile = *std::max_element(SNRs.begin(), SNRs.end());
   timeMinFile = *std::min_element(times.begin(), times.end());
@@ -179,12 +186,13 @@ int main(int argc, char *argv[]) {
   // Open plot
   cpgopen(plotType);
 
-  // DM vs time
+  // Create a DM vs time plot
   cpgsvp(0.1, 0.8, 0.1, 0.8);
   cpgswin(timeMin, timeMax, dmMin, dmMax);
   cpgbox("BCTSN", 0., 0, "BCTSN", 0., 0);
   cpglab("Time (s)", "DM (pc cm\\u-3\\d)", " ");
 
+  // Plot each event, using larger points for higher S/N events
   for (std::vector<float>::iterator i = SNRs.begin(); i != SNRs.end(); ++i) {
     if (*i > 10 && *i <= 20) {
       cpgpt1(times[std::distance(SNRs.begin(), i)], DMs[std::distance(SNRs.begin(), i)], 22);
@@ -197,10 +205,13 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  // Set the color index for the plots
   cpgsci(1);
 
-  // SNR vs DM
+  // Create a SNR vs DM plot
   cpgsvp(0.81, 0.9, 0.1, 0.8);
+  // If tha max S/N is greater than 10, automatically scale the plot axis
+  // Otherwise, just show the S/N axis from 10 to 11, although nothing should be plotted (note this shouldn't actually happen, as we exit if the max S/N i sless than 10)
   if (snrMax > 10) {
     cpgswin(10, 1.05 * snrMax, dmMin, dmMax);
     cpgbox("BCTSN", 0., 1, "BCTS", 0., 0);
@@ -210,18 +221,20 @@ int main(int argc, char *argv[]) {
   }
   cpglab("SNR", "", " ");
 
+  // Plot each event
   for (std::vector<float>::iterator i = SNRs.begin(); i != SNRs.end(); ++i) {
     if (*i > 10) {
       cpgpt1(*i, DMs[std::distance(SNRs.begin(), i)], 1);
     }
   }
 
-  // Time vs Width
+  // Create a time vs width plot
   cpgsvp(0.1, 0.8, 0.81, 0.95);
   cpgswin(timeMin, timeMax, log10(widthMin)/log10(2.0), log10(widthMax)/log10(2.0));
   cpgbox("BCTS", 0., 0, "BCTSN", 0., 0);
   cpglab("", "Width (log2 samples)", " ");
 
+  // Plot each event
   for (std::vector<float>::iterator i = SNRs.begin(); i != SNRs.end(); ++i) {
     if (*i > 10) {
       logWidth = log10(widths[std::distance(SNRs.begin(), i)])/log10(2.0);

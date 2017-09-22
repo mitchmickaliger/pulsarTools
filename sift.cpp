@@ -14,6 +14,7 @@ bool vectorSort(std::vector<double> i, std::vector<double> j) {
   return (i[0] > j[0]);
 }
 
+// External function to print help if needed
 void usage() {
   std::cout << std::endl << "Usage: sift -f CCLfile (-options) " << std::endl << std::endl;
   std::cout << "     -f: Input CCL file" << std::endl << std::endl;
@@ -31,14 +32,14 @@ void usage() {
   std::cout << "  candidate could be considered a harmonic." << std::endl << std::endl;;
 }
 
-/* -- sift --
-** This code will read in a CCL (crude candidate list; a list of all candidates returned from a search),
-** attempt to determine which candidates have harmonically related periods and related DMs, and return
-** an SCL (sifted candidate list; a list of only the single best candidate for every real signal).
-**
-** This version searches integer harmonics (and a few fractional harmonics). If there are too many related
-** candidates left in the CCL after tweaking the period match factor and DM match factor, try using 'strongSift'.
-*/
+/* -- sift --------------------------------------------------------------------------------------------------------
+** This code will read in a CCL (crude candidate list; a list of all candidates returned from a search),          |
+** attempt to determine which candidates have harmonically related periods and related DMs, and return            |
+** an SCL (sifted candidate list; a list of only the single best candidate for every real signal).                |
+**                                                                                                                |
+** This version searches integer harmonics (and a few fractional harmonics). If there are too many related        |
+** candidates left in the CCL after tweaking the period match factor and DM match factor, try using 'strongSift'. |
+---------------------------------------------------------------------------------------------------------------- */
 int main(int argc, char *argv[]) {
 
   int arg, cand, totalCands = 0, maxHarm = 8, arraySize;

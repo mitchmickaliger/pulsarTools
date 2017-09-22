@@ -14,6 +14,7 @@ bool vectorSort(std::vector<double> i, std::vector<double> j) {
   return (i[0] > j[0]);
 }
 
+// External function to print help if needed
 void usage() {
   std::cout << std::endl << "Usage: strongSift -f CCLfile (-options) " << std::endl << std::endl;
   std::cout << "     -f: Input CCL file" << std::endl << std::endl;
@@ -30,14 +31,14 @@ void usage() {
   std::cout << "  candidate could be considered a harmonic." << std::endl << std::endl;;
 }
 
-/* -- strongSift --
-** This code will read in a CCL (crude candidate list; a list of all candidates returned from a search),
-** attempt to determine which candidates have harmonically related periods and related DMs, and return
-** an SCL (sifted candidate list; a list of only the single best candidate for every real signal).
-**
-** This version searches A LOT of harmonics, both integer and fractional. If too many unrelated candidates
-** are being grouped in the CCL after tweaking the period match factor and DM match factor, try using 'sift'.
-*/
+/* -- strongSift ----------------------------------------------------------------------------------------------
+** This code will read in a CCL (crude candidate list; a list of all candidates returned from a search),      |
+** attempt to determine which candidates have harmonically related periods and related DMs, and return        |
+** an SCL (sifted candidate list; a list of only the single best candidate for every real signal).            |
+**                                                                                                            |
+** This version searches A LOT of harmonics, both integer and fractional. If too many unrelated candidates    |
+** are being grouped in the CCL after tweaking the period match factor and DM match factor, try using 'sift'. |
+------------------------------------------------------------------------------------------------------------ */
 int main(int argc, char *argv[]) {
 
   int arg, cand, totalCands = 0, maxHarm = 8, arraySize;

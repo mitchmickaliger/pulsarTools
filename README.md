@@ -14,28 +14,38 @@ Both sift and strongSift can be compiled with a simple call to g++, no extra lib
 
 
 
-plotfil and plot_events require PGPLOT and its CPGPLOT extension.
+plotFil and plotEvents require PGPLOT and its CPGPLOT extension.
+
+
 
 Here is an example of my makefile:
 
 ```
 #Compiling flags
-CFLAGS = -O3 -I/path/to/cpgplot.h
-CPPFLAGS = -O3 -I/path/to/cpgploth.
+CPPFLAGS = -O3 -I/path/to/cpgplot.h
 
 #Linking flags
 LFLAGS = -L/path/to/pgplot/libraries -lcpgplot -lpgplot -L/path/to/X11/libraries -lX11 -fno-backslash -lpng -lstdc++ -lm
 
 # Compiler
-CC = g++
+CXX = g++
 
-all: plotfil plot_events
+all: fileEdit plotFil plotEvents sift strongSift
 
-plotfil: plotfil.o
-	gfortran -o plotfil plotfil.o $(LFLAGS)
+filEdit:
+	${CXX} -o filEdit filEdit.cpp
 
-plot_events: plot_events.o
-	gfortran -o plot_events plot_events.o $(LFLAGS)
+plotFil: plotFil.o
+	gfortran -o plotFil plotFil.o $(LFLAGS)
+
+plotEvents: plotEvents.o
+	gfortran -o plotEvents plotEvents.o $(LFLAGS)
+
+sift:
+	${CXX} -o sift sift.cpp
+
+strongSift:
+	${CXX} -o strongSift strongSift.cpp
 
 clean:
 	rm -f *.o
