@@ -5,7 +5,6 @@
 #include<iostream>
 #include<fstream>
 #include<getopt.h>
-#include<time.h>
 
 // ADD FUNCTIONALITY TO REMOVE PARAMETERS
 
@@ -471,9 +470,12 @@ int main (int argc, char* argv[]) {
 
   }
 
-  // now re-write the header
+  // Seek to the beginning of the file
   file.seekg(0, file.beg);
+  // Overwrite the old header
   file.write(headerArray, headerLength);
+  // Close the file
+  file.close();
 
   free(headerArray);
 

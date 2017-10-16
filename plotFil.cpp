@@ -133,6 +133,7 @@ int main(int argc, char *argv[]) {
 
   // Since we opened the file at the end, report the size of the file. Once we have the header size we can calculate the length of the data.
   const size_t fileSize = file.tellg();
+
   // Seek back to the beginning of the file
   file.seekg(0, file.beg);
 
