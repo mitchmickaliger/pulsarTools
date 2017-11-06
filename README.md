@@ -1,8 +1,10 @@
 # pulsarTools
 
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+dmReducer removes entries from an ASCII events file that have arrival times greater than 60 seconds. This happens when there is an event at the beginning of a filterbank file that is appended to the previous filterbank file. Since the event will be picked up at the beginning of the next file, there is no need to record it twice.
+
+______________________________
 filAdder adds together any filterbank files you pass as arguments. NB, this does not check that the files you are adding are continguous in time, have the same frequency, etc.
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+______________________________
 
 
 
@@ -64,13 +66,16 @@ LFLAGS = -L/path/to/pgplot/libraries -lcpgplot -lpgplot -L/path/to/X11/libraries
 # Compiler
 CXX = g++
 
-all: filAdder filAppender filEdit plotFil plotEvents receiver RFIclean sift strongSift
+all: dmReducer filAdder filAppender filEdit plotFil plotEvents receiver RFIclean sift strongSift
+
+dmReducer:
+	${CXX} -o dmReducer dmReducer.cpp
 
 filAdder:
-        ${CXX} -o filAdder filAdder.cpp
+	${CXX} -o filAdder filAdder.cpp
 
 filAppender:
-        ${CXX} -o filAppender filAppender.cpp
+	${CXX} -o filAppender filAppender.cpp
 
 filEdit:
 	${CXX} -o filEdit filEdit.cpp
@@ -82,10 +87,10 @@ plotEvents: plotEvents.o
 	gfortran -o plotEvents plotEvents.o $(LFLAGS)
 
 receiver:
-        ${CXX} -o receiver receiver.cpp
+	${CXX} -o receiver receiver.cpp
 
 RFIclean:
-        ${CXX} -o RFIclean RFIclean.cpp
+	${CXX} -o RFIclean RFIclean.cpp
 
 sift:
 	${CXX} -o sift sift.cpp
