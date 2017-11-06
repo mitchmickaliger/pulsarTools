@@ -1,44 +1,19 @@
 # pulsarTools
 
 dmReducer removes entries from an ASCII events file that have arrival times greater than 60 seconds. This happens when there is an event at the beginning of a filterbank file that is appended to the previous filterbank file. Since the event will be picked up at the beginning of the next file, there is no need to record it twice.
-
 ______________________________
 filAdder adds together any filterbank files you pass as arguments. NB, this does not check that the files you are adding are continguous in time, have the same frequency, etc.
 ______________________________
-
-
-
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 filAppender is similar to filAdder, but will append a specified length of one filterbank file to another. NB, this also will not check that the files you are adding are continguous in time, have the same frequency, etc.
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+______________________________
 filEdit modifies filterbank file headers in place, a la filedit from SIGPROC, but has more available parameters to edit and is standalone.
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+______________________________
 plotFil and plotEvents require PGPLOT and its CPGPLOT extension.
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+______________________________
 receiver listens for connection on a specified port and writes incoming data to a specified file.
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+______________________________
 RFIclean applies a channel mask and/or runs MAD (median absolute deviation) cleaning on a filterbank file. The MAD cleaning algorithm is a CPU implementation.
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+______________________________
 sift and strongSift are deigned to identify and group together candidates that are harmonically related,
 or detections of the same signal at different DMs.
 
@@ -50,9 +25,7 @@ likely to group real signals with noise or RFI than standard sift, but may retur
 number of candidates.
 
 Both sift and strongSift can be compiled with a simple call to g++, no extra libraries required!
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
+______________________________
 
 Here is an example of my makefile:
 
