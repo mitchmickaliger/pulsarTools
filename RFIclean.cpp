@@ -74,9 +74,9 @@ void madFunction(std::vector<float> data, int numDataPoints, double madOutput[2]
 int main (int argc, char *argv[]) {
 
   char string[80], *header, *buffer;
-  int nchar = sizeof(int), numChans = 0, numBits = 0, numIFs = 0, arg, machineID, channel, index = 0, willCleanData = 0;
+  int nchar = sizeof(int), numChans = 0, numBits = 0, numIFs = 0, arg, machineID, channel, willCleanData = 0;
   int stride, nstride = 10, numSampsToAverage = 50, nSigma = 3;
-  long long int numSamps = 0, sample;
+  long long int numSamps = 0, sample, index = 0;
   double startTime, sampTime, fch1, foff, stats[2];
   float rand1 = 0, rand2 = 0;
   std::ifstream dataFile, maskFile;
