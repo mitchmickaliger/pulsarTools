@@ -73,10 +73,11 @@ void madFunction(std::vector<float> data, int numDataPoints, double madOutput[2]
 
 int main (int argc, char *argv[]) {
 
-  char string[80], *header, *buffer;
+  char string[80], *header;
+  unsigned char eightBitInt;
   int nchar = sizeof(int), numChans = 0, numBits = 0, numIFs = 0, arg, machineID, channel, willCleanData = 0;
-  int stride, nstride = 10, numSampsToAverage = 50, nSigma = 3;
-  long long int numSamps = 0, sample, index = 0;
+  int stride, nstride = 10, numSamplesToAverage = 50, nSigma = 3;
+  long long int numSamples = 0, sample, index = 0;
   double startTime, sampTime, fch1, foff, stats[2];
   float rand1 = 0, rand2 = 0;
   std::ifstream dataFile, maskFile;
@@ -227,7 +228,7 @@ int main (int argc, char *argv[]) {
         exit(0);
       }
     } else if (strcmp(string, "nsamples") == 0) {
-      dataFile.read((char*) &numSamps, sizeof(int));
+      dataFile.read((char*) &numSamples, sizeof(int));
       if (!dataFile) {
         std::cerr << "Did not read header parameter 'nsamples' properly!" << std::endl;
         exit(0);
@@ -251,7 +252,7 @@ int main (int argc, char *argv[]) {
   // Calculate the size of the data based on the total file size minus the header size
   const size_t bufferSize = dataFile.tellg() - headerSize;
   // Calculate how many time samples we have
-  numSamps = bufferSize/numChans;
+  numSamples = (long long) (long double) bufferSize/((long double) numBits/8.0)/(long double) numChans;
   // Seek back to the beginning of the file
   dataFile.seekg(0, dataFile.beg);
 
@@ -259,20 +260,51 @@ int main (int argc, char *argv[]) {
   header = (char*) malloc(sizeof(char) * headerSize);
   dataFile.read((char*) header, sizeof(char) * headerSize);
 
-  // Read buffer
-  buffer = (char*) malloc(sizeof(char) * bufferSize);
-  dataFile.read((char*) buffer, sizeof(char) * bufferSize);
+  // Instantiate a zero-filled vector to hold the data
+  std::vector<float> buffer(numSamples * numChans, 0);
+
+  // Determine the bit width of the data and read them in appropriately
+  // Data are read in as they are stored in the filterbank file, i.e. tsamp_1_chan_1, tsamp_1_chan_2, ..., tsamp_1_chan_N, tsamp_2_chan_1, ...
+  switch (numBits) {
+
+    // 8-bit data
+    case 8:
+      for (int i = 0; i < numSamples * numChans; i++) {
+        dataFile.read((char*) &eightBitInt, sizeof(unsigned char));
+        if (!dataFile) {
+          std::cerr << "Could not read 8-bit data properly!" << std::endl;
+          exit(0);
+        } else {
+          buffer[i] = (float) eightBitInt;
+        }
+      }
+      break;
+
+    // 32-bit data
+    case 32:
+      dataFile.read((char*) &buffer[0], sizeof(float) * numSamples * numChans);
+      if (!dataFile) {
+        std::cerr << "Could not read 32-bit data properly!" << std::endl;
+        exit(0);
+      }
+      break;
+
+    default:
+      std::cerr << "Cannot read " << numBits << " bit data!" << std::endl << "Data must be 8- or 32-bit!" << std::endl;
+      exit(0);
+
+  }
 
   // Close input file
   dataFile.close();
 
-  // Perform MAD cleaning if the user has requested it
-  if (willCleanData == 1) {
+  // Perform MAD cleaning if the user has requested it (and the file is 8-bit data, as MAD cleaning only works for 8-bit data currently)
+  if (willCleanData == 1 && numBits == 8) {
 
-    std::vector<float> bufferVecAvg(numChans, 0), vectorOfSampleStdDevs(numSamps, 0), vectorOfSampleMeans(numSamps, 0);
+    std::vector<float> bufferVecAvg(numChans, 0), vectorOfSampleStdDevs(numSamples, 0), vectorOfSampleMeans(numSamples, 0);
 
     // Calculate an array of spectral means/standard deviations for each time sample
-    for (sample = 0; sample < numSamps; sample++) {
+    for (sample = 0; sample < numSamples; sample++) {
       float sum = 0, sumSquaredResiduals = 0;
       for (channel = 0; channel < numChans; channel++) {
         sum += buffer[sample * numChans + channel]; // Add all channels for the current sample, like dedispersing at DM = 0
@@ -287,24 +319,24 @@ int main (int argc, char *argv[]) {
     /********************************* Calculate channel averages *****************************************/
 
     float sumOfTimeSamples;
-    int xMAX = numSamps + nstride - numSampsToAverage; 
+    int xMAX = numSamples + nstride - numSamplesToAverage; 
     float *buffer_avg = (float *) malloc(sizeof(float) * int(ceil(float(xMAX)/float(nstride)) * numChans));
 
-    // Do a moving average over a boxcar of width numSampsToAverage which moves nstride samples every step
+    // Do a moving average over a boxcar of width numSamplesToAverage which moves nstride samples every step
     for (int chunk = 0; chunk < ceil(float(xMAX)/float(nstride)); chunk++) {
       for (channel = 0; channel < numChans; channel++) {
         sumOfTimeSamples = 0;
-        if ((((numSampsToAverage - 1) * numChans) + (chunk * nstride * numChans)) < (numSamps * numChans)) {
-          for (int a = 0; a < numSampsToAverage; a++){
-            sumOfTimeSamples += buffer[(a * numChans) + channel + (chunk * nstride * numChans)]; // Average together numSampsToAverage time samples in each channel
+        if ((((numSamplesToAverage - 1) * numChans) + (chunk * nstride * numChans)) < (numSamples * numChans)) {
+          for (int a = 0; a < numSamplesToAverage; a++){
+            sumOfTimeSamples += buffer[(a * numChans) + channel + (chunk * nstride * numChans)]; // Average together numSamplesToAverage time samples in each channel
           }
         } else {
-          numSampsToAverage = ((numSamps * numChans) - (chunk * nstride * numChans) + 1)/numChans;
-          for (int a = 0; a < numSampsToAverage; a++){
+          numSamplesToAverage = ((numSamples * numChans) - (chunk * nstride * numChans) + 1)/numChans;
+          for (int a = 0; a < numSamplesToAverage; a++){
             sumOfTimeSamples += buffer[(a * numChans) + channel + (chunk * nstride * numChans)]; // Average together the remaining time samples in each channel
           }
         }
-        buffer_avg[channel + chunk * numChans] = sumOfTimeSamples/float(numSampsToAverage);
+        buffer_avg[channel + chunk * numChans] = sumOfTimeSamples/float(numSamplesToAverage);
       }
     }
 
@@ -314,9 +346,9 @@ int main (int argc, char *argv[]) {
     srand(time(NULL));
 
     // Calculate how many time samples remain after averaging
-    int numSampsAvg = int(ceil(float(xMAX)/float(nstride)));
+    int numSamplesAvg = int(ceil(float(xMAX)/float(nstride)));
 
-    for (int x = 0; x < numSampsAvg; x++) {
+    for (int x = 0; x < numSamplesAvg; x++) {
 
       // Fill bufferVecAvg with all channels from an individual time sample
       for (channel = 0; channel < numChans; channel++) {
@@ -363,12 +395,15 @@ int main (int argc, char *argv[]) {
     vectorOfSampleStdDevs.clear();
     vectorOfSampleMeans.clear();
 
+  } else if (willCleanData == 1 && numBits != 8) {
+    std::cout << std::endl << "MAD cleaning currently only works for 8-bit data! Skipping MAD..." << std::endl << std::endl;
   }
 
   // Mask bad channels
   if (maskFile) {
+    // Read each line of the mask file into the 'channel' variable
     while (maskFile >> channel) {
-      for (sample = 0; sample < numSamps; sample++) {
+      for (sample = 0; sample < numSamples; sample++) {
         index = channel + numChans * sample;
         buffer[index] = 128;
       }
@@ -378,11 +413,23 @@ int main (int argc, char *argv[]) {
 
   // Output .fil files
   outputFile.write(header, sizeof(char) * headerSize);
-  outputFile.write(buffer, sizeof(char) * bufferSize);
+  switch (numBits) {
+
+    case 8:
+    {
+      std::vector<char> charBuffer(buffer.begin(), buffer.end());
+      outputFile.write((char*) &charBuffer[0], sizeof(char) * numSamples * numChans);
+      break;
+    }
+
+    case 32:
+      outputFile.write((char*) &buffer[0], sizeof(float) * numSamples * numChans);
+      break;
+
+  }
   outputFile.close();
 
   // Clean up
-  free(buffer);
   free(header);
 
   return 0;
