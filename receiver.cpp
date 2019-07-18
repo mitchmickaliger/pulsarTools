@@ -11,7 +11,7 @@
 
 // External function to print help if needed
 void usage(void) {
-  std::cout << std::endl << "receiver -p <port> -b <blockSize> <file>" << std::endl << std::endl;
+  std::cout << std::endl << "receiver -p <port> -b <blockSize> -f <file>" << std::endl << std::endl;
   return;
 }
 
@@ -20,7 +20,7 @@ void usage(void) {
 ----------------------------------------------------------------------------------- */
 int main(int argc, char *argv[]) {
 
-  int socketFileDescriptor, newSocketFileDescriptor, bytesRead, arg, port = 56000, blockSize = 8192;
+  int socketFileDescriptor, newSocketFileDescriptor, bytesRead, arg, port = 56000, blockSize = 8192, optval = 1;
   socklen_t clientAddressLength;
   char *buffer;
   struct sockaddr_in serverAddress, clientAddress;
@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
       case 'f':
         fifoFileDescriptor.open(optarg, std::ofstream::binary);
         if (!fifoFileDescriptor.is_open()) {
-          std::cerr << "Failed to open fifo " << optarg << " to write!" << std::endl;
+          std::cerr << "Failed to open fifo " << optarg << " to read!" << std::endl;
           exit(1);
         }
         break;
@@ -72,6 +72,7 @@ int main(int argc, char *argv[]) {
     std::cerr << "Error opening socket!" << std::endl;
     exit(1);
   }
+  setsockopt(socketFileDescriptor, SOL_SOCKET, SO_REUSEADDR, (const void *) &optval, sizeof(int));
   bzero((char *) &serverAddress, sizeof(serverAddress));
   serverAddress.sin_family = AF_INET;
   serverAddress.sin_addr.s_addr = INADDR_ANY;
@@ -87,7 +88,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  std::cout << "receiver at port " << port << " openened" << std::endl;
+  std::cout << "receiver at port " << port << " opened" << std::endl;
 
   clientAddressLength = sizeof(clientAddress);
   newSocketFileDescriptor = accept(socketFileDescriptor, (struct sockaddr *) &clientAddress, &clientAddressLength);
