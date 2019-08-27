@@ -13,8 +13,8 @@
 
 // External function to print help if needed
 void usage() {
-  std::cout << std::endl << "Usage: plotFil (-options) -f fil_file" << std::endl << std::endl;
-  std::cout << std::endl << "     -f: Input .fil file" << std::endl;
+  std::cout << std::endl << "Usage: plotFil (-options) -f filFile" << std::endl << std::endl;
+  std::cout << "     -f: Input .fil file" << std::endl;
   std::cout << "     -b: Number of time samples to bin (default = 1)" << std::endl;
   std::cout << "     -c: Either plot channel frequencies (1) or channel indices (2) (default = 1)" << std::endl;
   std::cout << "     -C: Number of channels to add together (default = 1)" << std::endl;

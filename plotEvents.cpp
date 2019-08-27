@@ -25,13 +25,14 @@ void usage() {
 }
 
 /* -- plotEvents -----------------------------------------------------------------------------------------------------------------
-** Plots events detected from a single-pulse/FRB search.                                                                         |
+** Plots events detected from a single-pulse/FRB search. This code will automatically zoom in around candidates, so to ensure    |
+** comparibility between plots, please make use of the min/max time and DM flags.                                                |
 **                                                                                                                               |
 ** This code expects binary output from astro-accelerate, specifically, but can be used on any binary file with the same format. |
 ------------------------------------------------------------------------------------------------------------------------------- */
 int main(int argc, char *argv[]) {
 
-  int arg;
+  int arg, dataPlotted = 0;
   float timeMin = 0.0/0.0, timeMax = 0.0/0.0, dmMin = 0.0/0.0, dmMax = 0.0/0.0, snrMin = 0.0/0.0, snrMax = 0.0/0.0, widthMin = 0.0/0.0, widthMax = 0.0/0.0, logWidth;
   float timeMinFile = 0.0/0.0, timeMaxFile = 0.0/0.0, dmMinFile = 0.0/0.0, dmMaxFile = 0.0/0.0, snrMinFile = 0.0/0.0, snrMaxFile = 0.0/0.0, widthMinFile = 0.0/0.0, widthMaxFile = 0.0/0.0;
   float line[4];
@@ -147,44 +148,108 @@ int main(int argc, char *argv[]) {
   // Check for NaNs; a variable set to NaN will never equal itself
   // If a variable is NaN, it was not given as user input, and should be set given the data in the file
   // If a variable is not NaN, it was set and should not be changed
-  if (timeMin != timeMin) {
-    timeMin = timeMinFile;
+
+  if (timeMin != timeMin) { // The user has not specified a minimum time
+    timeMin = timeMinFile; // Set it to the minimum time in the file
+  } else { // The user has specified a minimum time
+    if (timeMin > timeMaxFile) {
+      std::cout << std::endl << std::endl << "No events detected after a time of " << timeMaxFile << std::endl << std::endl;
+      return 0; // Don't bother plotting if there are no events after the user's minimum time
+    }
   }
-  if (timeMax != timeMax) {
-    timeMax = timeMaxFile;
-  }
-  if (dmMin != dmMin) {
-    dmMin = dmMinFile;
-  }
-  if (dmMax != dmMax) {
-    dmMax = dmMaxFile;
-  }
-  if (snrMin != snrMin) {
-    snrMin = snrMinFile;
-  }
-  if (snrMax != snrMax) {
-    snrMax = snrMaxFile;
-  }
-  if (widthMin != widthMin) {
-    widthMin = widthMinFile;
-  }
-  if (widthMax != widthMax) {
-    widthMax = widthMaxFile;
+  if (timeMax != timeMax) { // The user has not specified a maximum time
+    timeMax = timeMaxFile; // Set it to the maximum time in the file
+  } else { // The user has specified a maximum time
+    if (timeMax < timeMinFile) {
+      std::cout << std::endl << std::endl << "No events detected before a time of " << timeMinFile << std::endl << std::endl;
+      return 0; // Don't bother plotting if there are no events before the user's maximum time
+    }
   }
 
+  if (dmMin != dmMin) { // The user has not specified a minimum DM
+    dmMin = dmMinFile; // Set it to the minimum DM in the file
+  } else { // The user has specified a minimum DM
+    if (dmMin > dmMaxFile) {
+      std::cout << std::endl << std::endl << "No events detected above a DM of " << dmMaxFile << std::endl << std::endl;
+      return 0; // Don't bother plotting if there are no events above the user's minimum DM
+    }
+  }
+  if (dmMax != dmMax) { // The user has not specified a maximum DM
+    dmMax = dmMaxFile; // Set it to the maximum DM in the file
+  } else { // The user has specified a maximum DM
+    if (dmMax < dmMinFile) {
+      std::cout << std::endl << std::endl << "No events detected below a DM of " << dmMinFile << std::endl << std::endl;
+      return 0; // Don't bother plotting if there are no events below the user's maximum DM
+    }
+  }
+
+  if (snrMin != snrMin) { // The user has not specified a minimum S/N
+    snrMin = snrMinFile; // Set it to the minimum S/N in the file
+  } else { // The user has specified a minimum S/N
+    if (snrMin > snrMaxFile) {
+      std::cout << std::endl << std::endl << "No events detected above a S/N of " << snrMaxFile << std::endl << std::endl;
+      return 0; // Don't bother plotting if there are no events above the user's minimum S/N
+    }
+  }
+  if (snrMax != snrMax) { // The user has not specified a maximum S/N
+    snrMax = snrMaxFile; // Set it to the maximum S/N in the file
+  } else { // The user has specified a maximum S/N
+    if (snrMax < snrMinFile) {
+      std::cout << std::endl << std::endl << "No events detected below a S/N of " << snrMinFile << std::endl << std::endl;
+      return 0; // Don't bother plotting if there are no events below the user's maximum S/N
+    }
+  }
+
+  if (snrMax < snrMin) { // Check if the user has input a maximum S/N that is below their input minimum S/N
+    std::cout << std::endl << std::endl << "The requested maximum S/N of " << snrMax << " is below the requested minimum S/N of " << snrMin << std::endl << std::endl;
+    return 0; // Nothing would be plotted in this case, so just exit now
+  }
+
+
+  if (widthMin != widthMin) { // The user has not specified a minimum width
+    widthMin = widthMinFile; // Set it to the minimum width in the file
+  } else { // The user has specified a minimum width
+    if (widthMin > widthMaxFile) {
+      std::cout << std::endl << std::endl << "No events detected above a width of " << widthMaxFile << std::endl << std::endl;
+      return 0; // Don't bother plotting if there are no events wider than the user's minimum width
+    }
+  }
+  if (widthMax != widthMax) { // The user has not specified a maximum width
+    widthMax = widthMaxFile;  //Set it to the maximum width in the file
+  } else { // The user has specified a maximum width
+    if (widthMax < widthMinFile) {
+      std::cout << std::endl << std::endl << "No events detected below a width of " << widthMinFile << std::endl << std::endl;
+      return 0; // Don't bother plotting if there are no events narrower than the user's maximum width
+    }
+  }
+
+  // Round the minimum S/N down and the maximum S/N up to the nearest integer for plotting purposes
   snrMin = floor(snrMin);
   snrMax = ceil(snrMax);
 
   std::cout << numberOfDetections << " events found:" << std::endl;
   std::cout << "Time: " << timeMin << " " << timeMax << ", DM: " << dmMin << " " << dmMax <<  ", SNR: " << snrMin << " " << snrMax << ", Width: " << widthMin << " " << widthMax << std::endl;
 
-  // Don't bother plotting if there are no events over 10 sigma
-  if (snrMax <= 10) {
+  // Check if any event fals into the requested time and DM range above the minimum (requested) S/N and below the maximum (requested) S/N
+  for (std::vector<float>::iterator i = SNRs.begin(); i != SNRs.end(); ++i) {
+    if (*i >= snrMin && *i <= snrMax) { // Check if the S/N of this event is within the requested range
+      if (times[std::distance(SNRs.begin(), i)] >= timeMin && times[std::distance(SNRs.begin(), i)] <= timeMax && DMs[std::distance(SNRs.begin(), i)] >= dmMin && DMs[std::distance(SNRs.begin(), i)] <= dmMax) { // Check if this event is within the requested time and DM range
+        dataPlotted = 1; // Signifiy that we will plot at least one point
+      }
+    }
+  }
+
+  // If no points will be plotted in the DM vs time plot, don't bother plotting anything, just exit here
+  if (dataPlotted == 0) {
+    std::cout << std::endl << std::endl << "No events detected within the time, DM, S/N, and width parameters provided!" << std::endl << std::endl;
     return 0;
   }
 
-  // Open plot
+  // Open the requested plot (default /xs)
   cpgopen(plotType);
+
+  // Set the color index for the plots
+  cpgsci(1);
 
   // Create a DM vs time plot
   cpgsvp(0.1, 0.8, 0.1, 0.8);
@@ -192,39 +257,37 @@ int main(int argc, char *argv[]) {
   cpgbox("BCTSN", 0., 0, "BCTSN", 0., 0);
   cpglab("Time (s)", "DM (pc cm\\u-3\\d)", " ");
 
-  // Plot each event, using larger points for higher S/N events
+  // Plot each event in the requested time and DM range above the minimum (requested) S/N and below the maximum (requested) S/N, using larger points for higher S/N events
   for (std::vector<float>::iterator i = SNRs.begin(); i != SNRs.end(); ++i) {
-    if (*i > 10 && *i <= 20) {
-      cpgpt1(times[std::distance(SNRs.begin(), i)], DMs[std::distance(SNRs.begin(), i)], 22);
-    } else if (*i > 20 && *i <= 50) {
-      cpgpt1(times[std::distance(SNRs.begin(), i)], DMs[std::distance(SNRs.begin(), i)], 24);
-    } else if (*i > 50 && *i <= 100) {
-      cpgpt1(times[std::distance(SNRs.begin(), i)], DMs[std::distance(SNRs.begin(), i)], 25);
-    } else if (*i > 100) {
-      cpgpt1(times[std::distance(SNRs.begin(), i)], DMs[std::distance(SNRs.begin(), i)], 26);
+    if (*i >= snrMin && *i <= snrMax) { // Check if the S/N of this event is within the requested range
+      if (times[std::distance(SNRs.begin(), i)] >= timeMin && times[std::distance(SNRs.begin(), i)] <= timeMax && DMs[std::distance(SNRs.begin(), i)] >= dmMin && DMs[std::distance(SNRs.begin(), i)] <= dmMax) { // Check if this event is within the requested time and DM range
+        if (*i < 10) {
+          cpgpt1(times[std::distance(SNRs.begin(), i)], DMs[std::distance(SNRs.begin(), i)], 20);
+        } else if (*i > 10 && *i <= 20) {
+          cpgpt1(times[std::distance(SNRs.begin(), i)], DMs[std::distance(SNRs.begin(), i)], 22);
+        } else if (*i > 20 && *i <= 50) {
+          cpgpt1(times[std::distance(SNRs.begin(), i)], DMs[std::distance(SNRs.begin(), i)], 24);
+        } else if (*i > 50 && *i <= 100) {
+          cpgpt1(times[std::distance(SNRs.begin(), i)], DMs[std::distance(SNRs.begin(), i)], 26);
+        } else if (*i > 100) {
+          cpgpt1(times[std::distance(SNRs.begin(), i)], DMs[std::distance(SNRs.begin(), i)], 28);
+        }
+      }
     }
   }
 
-  // Set the color index for the plots
-  cpgsci(1);
-
-  // Create a SNR vs DM plot
+  // Create a S/N vs DM plot
   cpgsvp(0.81, 0.9, 0.1, 0.8);
-  // If tha max S/N is greater than 10, automatically scale the plot axis
-  // Otherwise, just show the S/N axis from 10 to 11, although nothing should be plotted (note this shouldn't actually happen, as we exit if the max S/N i sless than 10)
-  if (snrMax > 10) {
-    cpgswin(10, 1.05 * snrMax, dmMin, dmMax);
-    cpgbox("BCTSN", 0., 1, "BCTS", 0., 0);
-  } else {
-    cpgswin(10, 11, dmMin, dmMax);
-    cpgbox("BCTSN", 0.5, 1, "BCTS", 0., 0);
-  }
+  cpgswin(snrMin - 1, 1.05 * snrMax, dmMin, dmMax);
+  cpgbox("BCTSN", 0., 0, "BCTS", 0., 0);
   cpglab("SNR", "", " ");
 
-  // Plot each event
+  // Plot each event in the requested time and DM range above the minimum (requested) S/N and below the maximum (requested) S/N
   for (std::vector<float>::iterator i = SNRs.begin(); i != SNRs.end(); ++i) {
-    if (*i > 10) {
-      cpgpt1(*i, DMs[std::distance(SNRs.begin(), i)], 1);
+    if (*i >= snrMin && *i <= snrMax) { // Check if the S/N of this event is within the requested range
+      if (times[std::distance(SNRs.begin(), i)] >= timeMin && times[std::distance(SNRs.begin(), i)] <= timeMax && DMs[std::distance(SNRs.begin(), i)] >= dmMin && DMs[std::distance(SNRs.begin(), i)] <= dmMax) { // Check if this event is within the requested time and DM range
+        cpgpt1(*i, DMs[std::distance(SNRs.begin(), i)], 1);
+      }
     }
   }
 
@@ -234,14 +297,17 @@ int main(int argc, char *argv[]) {
   cpgbox("BCTS", 0., 0, "BCTSN", 0., 0);
   cpglab("", "Width (log2 samples)", " ");
 
-  // Plot each event
+  // Plot each event above the minimum (requested) S/N and below the maximum (requested) S/N
   for (std::vector<float>::iterator i = SNRs.begin(); i != SNRs.end(); ++i) {
-    if (*i > 10) {
-      logWidth = log10(widths[std::distance(SNRs.begin(), i)])/log10(2.0);
-      cpgpt1(times[std::distance(SNRs.begin(), i)], logWidth, 1);
+    if (*i >= snrMin && *i <= snrMax) { // Check if the S/N of this event is within the requested range
+      if (times[std::distance(SNRs.begin(), i)] >= timeMin && times[std::distance(SNRs.begin(), i)] <= timeMax && DMs[std::distance(SNRs.begin(), i)] >= dmMin && DMs[std::distance(SNRs.begin(), i)] <= dmMax) { // Check if this event is within the requested time and DM range
+        logWidth = log10(widths[std::distance(SNRs.begin(), i)])/log10(2.0);
+        cpgpt1(times[std::distance(SNRs.begin(), i)], logWidth, 1);
+      }
     }
   }
 
+  // Close plot file and release graphics device
   cpgend();
 
   return 0;
