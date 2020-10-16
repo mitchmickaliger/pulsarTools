@@ -33,9 +33,9 @@ void usage() {
 --------------------------------------------------------------------------------------------------------------- */
 int main(int argc, char *argv[]) {
 
-  char string[80], plotType[LIM] = "/xs";
+  char string[80], sourceName[80], plotType[LIM] = "/xs";
   int i, nchar = sizeof(int), samplesToAdd = 1, numChans = 0, channelsToAdd = 1, numBits = 0, numIFs = 0, arg, multiPage = 0, grayscale = 0;
-  int telescopeID, dataType, machineID, bit, channelInfoType = 1;
+  int telescopeID, dataType, machineID, bit, channelInfoType = 1, numBeams, beamNumber;
   unsigned char charOfValues, eightBitInt;
   unsigned short sixteenBitInt;
   double obsStart, sampTime, fCh1, fOff;
@@ -172,7 +172,9 @@ int main(int argc, char *argv[]) {
     }
 
     // Read parameters
-    if (strcmp(string, "tsamp") == 0) {
+    if (strcmp(string, "HEADER_START") == 0) {
+      continue;
+    } else if (strcmp(string, "tsamp") == 0) {
       file.read((char*) &sampTime, sizeof(double));
       if (!file) {
         std::cerr << "Did not read header parameter 'tsamp' properly!" << std::endl;
@@ -238,11 +240,33 @@ int main(int argc, char *argv[]) {
         std::cerr << "Did not read header parameter 'data_type' properly!" << std::endl;
         exit(0);
       }
+    } else if (strcmp(string, "source_name") == 0) {
+      file.read((char*) &nchar, sizeof(int));
+      file.read((char*) sourceName, nchar);
+      sourceName[nchar] = '\0';
+      if (!file) {
+        std::cerr << "Did not read header parameter 'source_name' properly!" << std::endl;
+        exit(0);
+      }
+    } else if (strcmp(string, "nbeams") == 0) {
+      file.read((char*) &numBeams, sizeof(int));
+      if (!file) {
+        std::cerr << "Did not read header parameter 'nbeams' properly!" << std::endl;
+        exit(0);
+      }
+    } else if (strcmp(string, "ibeam") == 0) {
+      file.read((char*) &beamNumber, sizeof(int));
+      if (!file) {
+        std::cerr << "Did not read header parameter 'ibeam' properly!" << std::endl;
+        exit(0);
+      }
     } else {
       std::cerr << "Unknown header parameter " << string << std::endl;
     }
 
   }
+
+  std::cerr << "Done reading header!" << std::endl;
 
   // Get the total size of the data in bytes based on the current position indicator and the value of the position indicator at the end of the file
   const size_t bufferSize = fileSize - file.tellg();
