@@ -20,6 +20,7 @@ void usage() {
   std::cout << "     -C: Number of channels to add together (default = 1)" << std::endl;
   std::cout << "     -d: DM to dedsiperse before plotting (default = 0)" << std::endl;
   std::cout << "     -g: Output plot type (default = /xs)" << std::endl;
+  std::cout << "     -k: Create a plot in grayscale (default = color)" << std::endl;
   std::cout << "     -S: Time at which to begin plotting (default = start of file)" << std::endl;
   std::cout << "     -T: Seconds of data to plot, from start of file or requested start point (default = til end of file)" << std::endl;
   std::cout << "     -t: Time chunk (in seconds) to plot (default = entire file)" << std::endl << std::endl;
@@ -33,7 +34,7 @@ void usage() {
 int main(int argc, char *argv[]) {
 
   char string[80], plotType[LIM] = "/xs";
-  int i, nchar = sizeof(int), samplesToAdd = 1, numChans = 0, channelsToAdd = 1, numBits = 0, numIFs = 0, arg, multiPage = 0;
+  int i, nchar = sizeof(int), samplesToAdd = 1, numChans = 0, channelsToAdd = 1, numBits = 0, numIFs = 0, arg, multiPage = 0, grayscale = 0;
   int telescopeID, dataType, machineID, bit, channelInfoType = 1;
   unsigned char charOfValues, eightBitInt;
   unsigned short sixteenBitInt;
@@ -52,7 +53,7 @@ int main(int argc, char *argv[]) {
   }
 
   // Read command line parameters
-  while ((arg = getopt(argc, argv, "b:c:C:d:g:S:T:t:f:h")) != -1) {
+  while ((arg = getopt(argc, argv, "b:c:C:d:g:kS:T:t:f:h")) != -1) {
     switch (arg) {
 
       case 'b':
@@ -90,6 +91,10 @@ int main(int argc, char *argv[]) {
 
       case 'g':
         strcpy(plotType, optarg);
+        break;
+
+      case 'k':
+        grayscale = 1;
         break;
 
       case 'S':
@@ -537,7 +542,11 @@ int main(int argc, char *argv[]) {
         cpglab("Time (s)", "Channel Number", " "); // Label the x- and y-axis; leave the title blank
       }
       // Plot the .fil file in the plot window
-      cpgimag(&data[0], numTimePoints, numChannels, 1, numTimePoints, 1, numChannels, dataMin, dataMax, tr);
+      if (grayscale == 0) {
+        cpgimag(&data[0], numTimePoints, numChannels, 1, numTimePoints, 1, numChannels, dataMin, dataMax, tr); // Make a color image
+      } else {
+        cpggray(&data[0], numTimePoints, numChannels, 1, numTimePoints, 1, numChannels, dataMin, dataMax, tr); // Make a grayscale image
+      }
       // Place axes on plot
       cpgbox("BCTSNI", 0., 0, "BCTSNI", 0., 0);
   
@@ -562,7 +571,11 @@ int main(int argc, char *argv[]) {
         cpglab("Time (s)", "Channel Number", " "); // Label the x- and y-axis; leave the title blank
       }
       // Plot the .fil file in the plot window
-      cpgimag(&data[0], numTimePoints, numChannels, 1, numTimePoints, 1, numChannels, dataMin, dataMax, tr);
+      if (grayscale == 0) {
+        cpgimag(&data[0], numTimePoints, numChannels, 1, numTimePoints, 1, numChannels, dataMin, dataMax, tr); // Make a color image
+      } else {
+        cpggray(&data[0], numTimePoints, numChannels, 1, numTimePoints, 1, numChannels, dataMin, dataMax, tr); // Make a grayscale image
+      }
       // Place axes on plot
       cpgbox("BCTSNI", 0., 0, "BCTSNI", 0., 0);
 
@@ -581,7 +594,11 @@ int main(int argc, char *argv[]) {
       cpglab("Time (s)", "Channel Number", " "); // Label the x- and y-axis; leave the title blank
     }
     // Plot the .fil file in the plot window
-    cpgimag(&data[0], numTimePoints, numChannels, 1, numTimePoints, 1, numChannels, dataMin, dataMax, tr);
+    if (grayscale == 0) {
+      cpgimag(&data[0], numTimePoints, numChannels, 1, numTimePoints, 1, numChannels, dataMin, dataMax, tr); // Make a color image
+    } else {
+      cpggray(&data[0], numTimePoints, numChannels, 1, numTimePoints, 1, numChannels, dataMin, dataMax, tr); // Make a grayscale image
+    }
     // Place axes on plot
     cpgbox("BCTSNI", 0., 0, "BCTSNI", 0., 0);
   }

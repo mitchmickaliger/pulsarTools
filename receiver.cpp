@@ -72,7 +72,20 @@ int main(int argc, char *argv[]) {
     std::cerr << "Error opening socket!" << std::endl;
     exit(1);
   }
-  setsockopt(socketFileDescriptor, SOL_SOCKET, SO_REUSEADDR, (const void *) &optval, sizeof(int));
+
+  // Allow for reuse of this socket, which needs to be done, as we regularly close and reopen the socket for each new observation
+  if (setsockopt(socketFileDescriptor, SOL_SOCKET, SO_REUSEADDR, (const void *) &optval, sizeof(int)) != 0) {
+    std::cerr << "Error setting up socket for reuse!" << std::endl;
+  }
+
+  // Turn off socket linger, and set the linger timeout to 0. A close() or shutdown() command will wait until all messages have been sent, or until the linger timeout has been reached (hence setting the timeout to zero). The exit() command will close the socket, but the socket will always linger, unless this is specifically turned off.
+  linger socketLinger;
+  socketLinger.l_onoff = 0; // Explicitly turn off socket linger
+  socketLinger.l_linger = 0; // Set the linger timeout to 0
+  if (setsockopt(socketFileDescriptor, SOL_SOCKET, SO_LINGER, (const void *) &socketLinger, sizeof(socketLinger)) != 0) {
+    std::cerr << "Error turning off socket linger!" << std::endl;
+  }
+
   bzero((char *) &serverAddress, sizeof(serverAddress));
   serverAddress.sin_family = AF_INET;
   serverAddress.sin_addr.s_addr = INADDR_ANY;
