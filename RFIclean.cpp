@@ -32,7 +32,7 @@ void usage() {
 
 // Function to calculate the Median Absolute Difference (MAD) of numDataPoints
 // This function calculates the median using a histogram. This is roughly twice as fast as using std::nth_element
-void madFunction(std::vector<float> data, int numDataPoints, double madOutput[2]) {
+void madFunction(const std::vector<float> &data, int numDataPoints, double madOutput[2]) {
 
   int numHistogramBins = 256; // Number of bins in the histogram, i.e. max value of the data, e.g. 256 for 8-bit data
   int currentTotal = 0, median = 0;
@@ -71,14 +71,47 @@ void madFunction(std::vector<float> data, int numDataPoints, double madOutput[2]
   madOutput[0] = median;
   madOutput[1] = variance;
 
+  free(histogram);
   residualArray.clear();
+
+}
+
+void normalStats(const std::vector<float> &data, int numDataPoints, double statsOutput[2]) {
+
+  int numHistogramBins = 256; // Number of bins in the histogram, i.e. max value of the data, e.g. 256 for 8-bit data
+  int currentTotal = 0, dataMedian = 0;
+  float dataMean, dataStandardDeviation;
+  long *histogram = (long *) calloc(sizeof(long), numHistogramBins);
+
+  // Create a histogram of the data
+  for (int i = 0; i < numDataPoints; i++) {
+    histogram[(int) data[i]]++;
+  }
+
+  // Find the median from the histogram
+  while (currentTotal < numDataPoints/2) {
+    currentTotal += histogram[dataMedian];
+    dataMedian++;
+  }
+
+  // Calculate the mean of the data
+  dataMean = std::accumulate(data.begin(), data.end(), (float) 0.0)/ (float) numDataPoints;
+
+  // Calculate the standard deviation of this averaged time sample
+  dataStandardDeviation = std::sqrt((std::inner_product(data.begin(), data.end(), data.begin(), (float) 0.0)/(float) numDataPoints) - (dataMean * dataMean));
+
+  // Return the median and standard deviation to an array of size 2
+  statsOutput[0] = dataMedian;
+  statsOutput[1] = dataStandardDeviation;
+
+//  free(histogram);
 
 }
 
 int main (int argc, char *argv[]) {
 
   int nchar = sizeof(int), numChans = 0, numBits = 0, numIFs = 0, arg, machineID, telescopeID, dataType, numBeams, beamNumber, channel, stride, willCleanData = 0, replaceWithNoise = 0;
-  int const nstride = 10;
+  int const nstride = 20;
   int const numSamplesToAverage = 50;
   int const nSigma = 3;
   char string[80], sourceName[80], *header;
@@ -147,6 +180,8 @@ int main (int argc, char *argv[]) {
   if (!dataFile.is_open()) {
     std::cerr << std::endl << "You must input a fil file with the -f flag!" << std::endl;
     usage();
+    dataFile.close();
+    outputFile.close();
     exit(0);
   }
 
@@ -154,6 +189,8 @@ int main (int argc, char *argv[]) {
   if (!outputFile.is_open()) {
     std::cerr << std::endl << "You must input an output file with the -o flag!" << std::endl;
     usage();
+    dataFile.close();
+    outputFile.close();
     exit(0);
   }
 
@@ -165,6 +202,8 @@ int main (int argc, char *argv[]) {
     exit(0);
   }
 
+  std::cout << "Reading header... " << std::endl;
+
   // Read header parameters
   while (true) {
 
@@ -172,7 +211,7 @@ int main (int argc, char *argv[]) {
     strcpy(string, "ERROR");
     dataFile.read((char*) &nchar, sizeof(int));
     if (!dataFile) {
-      std::cerr << "Error reading header string size!" << std::endl;
+      std::cerr << "  Error reading header string size!" << std::endl;
       exit(0);
     }
 
@@ -184,7 +223,9 @@ int main (int argc, char *argv[]) {
     // Read string
     dataFile.read((char*) string, nchar);
     if (!dataFile) {
-      std::cerr << "Could not read header string!" << std::endl;
+      std::cerr << "  Could not read header string!" << std::endl;
+      dataFile.close();
+      outputFile.close();
       exit(0);
     }
     string[nchar] = '\0';
@@ -200,67 +241,89 @@ int main (int argc, char *argv[]) {
     } else if (strcmp(string, "tsamp") == 0) {
       dataFile.read((char*) &sampTime, sizeof(double));
       if (!dataFile) {
-        std::cerr << "Did not read header parameter 'tsamp' properly!" << std::endl;
+        std::cerr << "  Did not read header parameter 'tsamp' properly!" << std::endl;
+        dataFile.close();
+        outputFile.close();
         exit(0);
       }
     } else if (strcmp(string, "tstart") == 0) {
       dataFile.read((char*) &startTime, sizeof(double));
       if (!dataFile) {
-        std::cerr << "Did not read header parameter 'tstart' properly!" << std::endl;
+        std::cerr << "  Did not read header parameter 'tstart' properly!" << std::endl;
+        dataFile.close();
+        outputFile.close();
         exit(0);
       }
     } else if (strcmp(string, "fch1") == 0) {
       dataFile.read((char*) &fch1, sizeof(double));
       if (!dataFile) {
-        std::cerr << "Did not read header parameter 'fch1' properly!" << std::endl;
+        std::cerr << "  Did not read header parameter 'fch1' properly!" << std::endl;
+        dataFile.close();
+        outputFile.close();
         exit(0);
       }
     } else if (strcmp(string, "foff") == 0) {
       dataFile.read((char*) &foff, sizeof(double));
       if (!dataFile) {
-        std::cerr << "Did not read header parameter 'foff' properly!" << std::endl;
+        std::cerr << "  Did not read header parameter 'foff' properly!" << std::endl;
+        dataFile.close();
+        outputFile.close();
         exit(0);
       }
     } else if (strcmp(string, "nchans") == 0) {
       dataFile.read((char*) &numChans, sizeof(int));
       if (!dataFile) {
-        std::cerr << "Did not read header parameter 'nchans' properly!" << std::endl;
+        std::cerr << "  Did not read header parameter 'nchans' properly!" << std::endl;
+        dataFile.close();
+        outputFile.close();
         exit(0);
       }
     } else if (strcmp(string, "nifs") == 0) {
       dataFile.read((char*) &numIFs, sizeof(int));
       if (!dataFile) {
-        std::cerr << "Did not read header parameter 'nifs' properly!" << std::endl;
+        std::cerr << "  Did not read header parameter 'nifs' properly!" << std::endl;
+        dataFile.close();
+        outputFile.close();
         exit(0);
       }
     } else if (strcmp(string, "nbits") == 0 ) {
       dataFile.read((char*) &numBits, sizeof(int));
       if (!dataFile) {
-        std::cerr << "Did not read header parameter 'nbits' properly!" << std::endl;
+        std::cerr << "  Did not read header parameter 'nbits' properly!" << std::endl;
+        dataFile.close();
+        outputFile.close();
         exit(0);
       }
     } else if (strcmp(string, "nsamples") == 0) {
       dataFile.read((char*) &numSamples, sizeof(int));
       if (!dataFile) {
-        std::cerr << "Did not read header parameter 'nsamples' properly!" << std::endl;
+        std::cerr << "  Did not read header parameter 'nsamples' properly!" << std::endl;
+        dataFile.close();
+        outputFile.close();
         exit(0);
       }
     } else if (strcmp(string, "machine_id") == 0) {
       dataFile.read((char*) &machineID, sizeof(int));
       if (!dataFile) {
-        std::cerr << "Did not read header parameter 'machine_id' properly!" << std::endl;
+        std::cerr << "  Did not read header parameter 'machine_id' properly!" << std::endl;
+        dataFile.close();
+        outputFile.close();
         exit(0);
       }
     } else if (strcmp(string, "telescope_id") == 0) {
       dataFile.read((char*) &telescopeID, sizeof(int));
       if (!dataFile) {
-        std::cerr << "Did not read header parameter 'telescope_id' properly!" << std::endl;
+        std::cerr << "  Did not read header parameter 'telescope_id' properly!" << std::endl;
+        dataFile.close();
+        outputFile.close();
         exit(0);
       }
     } else if (strcmp(string, "data_type") == 0) {
       dataFile.read((char*) &dataType, sizeof(int));
       if (!dataFile) {
-        std::cerr << "Did not read header parameter 'data_type' properly!" << std::endl;
+        std::cerr << "  Did not read header parameter 'data_type' properly!" << std::endl;
+        dataFile.close();
+        outputFile.close();
         exit(0);
       }
     } else if (strcmp(string, "source_name") == 0) {
@@ -268,28 +331,34 @@ int main (int argc, char *argv[]) {
       dataFile.read((char*) sourceName, nchar);
       sourceName[nchar] = '\0';
       if (!dataFile) {
-        std::cerr << "Did not read header parameter 'source_name' properly!" << std::endl;
+        std::cerr << "  Did not read header parameter 'source_name' properly!" << std::endl;
+        dataFile.close();
+        outputFile.close();
         exit(0);
       }
     } else if (strcmp(string, "nbeams") == 0) {
       dataFile.read((char*) &numBeams, sizeof(int));
       if (!dataFile) {
-        std::cerr << "Did not read header parameter 'nbeams' properly!" << std::endl;
+        std::cerr << "  Did not read header parameter 'nbeams' properly!" << std::endl;
+        dataFile.close();
+        outputFile.close();
         exit(0);
       }
     } else if (strcmp(string, "ibeam") == 0) {
       dataFile.read((char*) &beamNumber, sizeof(int));
       if (!dataFile) {
-        std::cerr << "Did not read header parameter 'ibeam' properly!" << std::endl;
+        std::cerr << "  Did not read header parameter 'ibeam' properly!" << std::endl;
+        dataFile.close();
+        outputFile.close();
         exit(0);
       }
     } else {
-      std::cerr << "Unknown header parameter " << string << std::endl;
+      std::cerr << "  Unknown header parameter " << string << std::endl;
     }
 
   }
 
-  std::cerr << "Done reading header!" << std::endl;
+  std::cerr << "done!" << std::endl;
 
   // Determine the size of the header from the current position in the file
   const size_t headerSize = dataFile.tellg();
@@ -318,33 +387,43 @@ int main (int argc, char *argv[]) {
 
     // 8-bit data
     case 8:
+      std::cout << "Reading 8-bit data... " << std::flush;
       for (sample = 0; sample < numSamples; sample++) {
         for (channel = 0; channel < numChans; channel++) {
           dataFile.read((char*) &eightBitInt, sizeof(unsigned char));
           if (!dataFile) {
-            std::cerr << "Could not read 8-bit data properly!" << std::endl;
+            std::cerr << std::endl << "Could not read 8-bit data properly!" << std::endl;
+            dataFile.close();
+            outputFile.close();
             exit(0);
           } else {
             data[sample][channel] = (float) eightBitInt;
           }
         }
       }
+      std::cout << "done!" << std::endl;
       break;
 
     // 32-bit data
     case 32:
+      std::cout << "Reading 32-bit data... " << std::flush;
       for (sample = 0; sample < numSamples; sample++) {
         // Read each channel for a particular time sample into the corresponding vector for that time sample
         dataFile.read((char*) &data[sample], sizeof(float) * numChans);
         if (!dataFile) {
           std::cerr << "Could not read 32-bit data properly!" << std::endl;
+          dataFile.close();
+          outputFile.close();
           exit(0);
         }
       }
+      std::cout << "done!" << std::endl;
       break;
 
     default:
       std::cerr << "Cannot read " << numBits << " bit data!" << std::endl << "Data must be 8- or 32-bit!" << std::endl;
+      dataFile.close();
+      outputFile.close();
       exit(0);
 
   }
@@ -355,11 +434,13 @@ int main (int argc, char *argv[]) {
   // Perform MAD cleaning if the user has requested it (and the file is 8-bit data, as MAD cleaning only works for 8-bit data currently)
   if (willCleanData == 1 && numBits == 8) {
 
+    std::cout << "Cleaning data with MAD... " << std::flush;
+
     std::vector<float> bufferVecAvg(numChans, 0), vectorOfSampleStdDevs(numSamples, 0), vectorOfSampleMeans(numSamples, 0);
 
     // Calculate an array of spectral means/standard deviations for each time sample
     for (sample = 0; sample < numSamples; sample++) {
-      // Calculate the mean of channels for this sample
+      // Calculate the mean of all channels for this sample
       vectorOfSampleMeans[sample] = std::accumulate(data[sample].begin(), data[sample].end(), (float) 0.0)/(float) numChans;
       // Calculate the standard deviation of channels for this sample
       vectorOfSampleStdDevs[sample] = std::sqrt((std::inner_product(data[sample].begin(), data[sample].end(), data[sample].begin(), (float) 0.0)/(float) numChans) - (vectorOfSampleMeans[sample] * vectorOfSampleMeans[sample]));
@@ -369,7 +450,7 @@ int main (int argc, char *argv[]) {
     int numberOfSamplesAveraged, numberOfTimeSamplesRemaining, numberOfAveragedTimeSamples = ceil((float) (numSamples + nstride - numSamplesToAverage)/(float) nstride);
     std::vector<std::vector<float> > averagedData(numberOfAveragedTimeSamples, timeSamples);
 
-    // Do a moving average over a boxcar of width numSamplesToAverage which moves nstride samples every step
+    // Do a moving average over a boxcar of width numSamplesToAverage which moves 'nstride' samples every step
     for (int chunk = 0; chunk < numberOfAveragedTimeSamples; chunk++) {
 
       // For the last chunk, check how many time samples remain in the data, as it may be fewer than numSamplesToAverage
@@ -415,7 +496,6 @@ int main (int argc, char *argv[]) {
     // Initialize random number generator
     srand(time(NULL));
 
-// CAN DO SOME THINGS IN HERE BETTER, E.G. STD::ACCUMULATE() IN PLACE OF FOR(CHANNEL) LOOP
 //    for (int x = 0; x < numberOfAveragedTimeSamples; x++) {
 //
 //      // Fill bufferVecAvg with all channels from an individual time sample
@@ -459,81 +539,99 @@ int main (int argc, char *argv[]) {
 //    }
 
     // Clean up
+    bufferVecAvg.clear();
     averagedData.clear();
     vectorOfSampleStdDevs.clear();
     vectorOfSampleMeans.clear();
+
+    std::cout << "done!" << std::endl;
 
   } else if (willCleanData == 1 && numBits != 8) {
     std::cout << std::endl << "MAD cleaning currently only works for 8-bit data! Skipping MAD..." << std::endl << std::endl;
   }
 
-// THIS CAN BE REPLACED WITH THE CODE ABOVE FOR THE MAD CLEANING, ONCE THAT'S BEEN DEBUGGED
-//  // Replace channels to be masked with Gaussian noise based on the median and standard deviation of the local data
-//  if (maskFile && replaceWithNoise) {
-//
-//    std::vector<float> bufferVecAvg(numChans, 0), vectorOfSampleStdDevs(numSamples, 0), vectorOfSampleMeans(numSamples, 0);
-//
-//    // Calculate an array of spectral means/standard deviations for each time sample
-//    for (sample = 0; sample < numSamples; sample++) {
-//      // Calculate the mean of all channels for this sample
-//      vectorOfSampleMeans[sample] = std::accumulate(data[sample].begin(), data[sample].end(), (float) 0.0)/(float) numChans;
-//      // Calculate the standard deviation of channels for this sample
-//      vectorOfSampleStdDevs[sample] = std::sqrt((std::inner_product(data[sample].begin(), data[sample].end(), data[sample].begin(), (float) 0.0)/(float) numChans) - (vectorOfSampleMeans[sample] * vectorOfSampleMeans[sample]));
-//    }
-//
-//    // ------------------- Calculate channel averages -------------------
-//    int xMAX = numSamples + nstride - numSamplesToAverage;
-//    float *averagedBuffer = (float *) malloc(sizeof(float) * int(ceil(float(xMAX)/float(nstride)) * numChans));
-//
-//    // Do a moving average over a boxcar of width numSamplesToAverage which moves nstride samples every step
-//    for (int chunk = 0; chunk < ceil(float(xMAX)/float(nstride)); chunk++) {
-//      for (channel = 0; channel < numChans; channel++) {
-//        if ((((numSamplesToAverage - 1) * numChans) + (chunk * nstride * numChans)) < (numSamples * numChans)) {
-//          averagedBuffer[channel + chunk * numChans] = std::accumulate(buffer[channel + (chunk * nstride * numChans)], buffer[((numSamplesToAverage - 1) * numChans) + channel + (chunk * nstride * numChans)], 0.0)/(float) numSamplesToAverage; // Average together numSamplesToAverage time samples in each channel
-//        } else {
-//          averagedBuffer[channel + chunk * numChans] = std::accumulate(buffer[channel + (chunk * nstride * numChans)], buffer[(((((numSamples * numChans) - (chunk * nstride * numChans) + 1)/numChans) - 1) * numChans) + channel + (chunk * nstride * numChans)], 0.0)/(float) (((numSamples * numChans) - (chunk * nstride * numChans) + 1)/numChans); // Average together the remaining time samples in each channel
-//        }
-//      }
-//    }
-//
-//    // Calculate how many time samples remain after averaging
-//    int numSamplesAvg = int(ceil(float(xMAX)/float(nstride)));
-//
-//    for (int x = 0; x < numSamplesAvg; x++) {
-//
-//      // Fill bufferVecAvg with all channels from an individual (averaged) time sample
-//      for (channel = 0; channel < numChans; channel++) {
-//        bufferVecAvg[channel] = averagedBuffer[channel + numChans * x];
-//      }
-//
-//      // Calculate normal statistics
-//      normalStats(bufferVecAvg, numChans, stats);
-//
-//      // Generate a random seed by generating a seed sequence starting with 8 random values
-//      std::seed_seq randomSeed{generateRand(), generateRand(), generateRand(), generateRand(), generateRand(), generateRand(), generateRand(), generateRand()};
-//      // Create a Mersenne twister based on the random seed generated above
-//      std::mt19937 randomNumGenerator(randomSeed);
-//      // Create a Gaussian distribution with the same median and standard deviation as the local data
-//      std::normal_distribution<float> distribution(stats[0], stats[1]);
-//
-//
-//      // Read each line of the mask file into the 'channel' variable
-//      while (maskFile >> channel) {
-//        // Replace this channel with Gaussian noise
-//        for (sample = 0; sample < numSamples; sample++) {
-//          buffer[channel + numChans * sample] = distribution(randomNumGenerator);
-//        }
-//      }
-//
-//    }
-//
-//    // Clean up
-//    free(averagedBuffer);
-//    vectorOfSampleStdDevs.clear();
-//    vectorOfSampleMeans.clear();
-//
-//  } else if (maskFile) { // Replace channels to be masked with a constant value
-if (maskFile) { // Replace channels to be masked with a constant value
+  // Replace channels to be masked with Gaussian noise based on the median and standard deviation of the local data
+  if (maskFile && replaceWithNoise) {
+
+    std::cout << "Masking channels with Gaussian noise... " << std::flush;
+
+    // Calculate channel averages
+    int numberOfSamplesAveraged, numberOfTimeSamplesRemaining, numberOfAveragedTimeSamples = ceil((float) (numSamples + nstride - numSamplesToAverage)/(float) nstride);
+    std::vector<std::vector<float> > averagedData(numberOfAveragedTimeSamples, timeSamples);
+
+    // Do a moving average over a boxcar of width numSamplesToAverage which moves 'nstride' time samples every step
+    for (long int averagedSample = 0; averagedSample < numberOfAveragedTimeSamples; averagedSample++) {
+
+      // For the last averaged time sample, check how many time samples remain in the data, as it may be fewer than numSamplesToAverage
+      if (averagedSample == (numberOfAveragedTimeSamples - 1)) {
+
+        // We have enough time samples left to sum the full numSamplesToAverage
+        if ((averagedSample * nstride + numSamplesToAverage - 1) < data.size()) {
+          // Add together all numSamplesToAverage time samples in this averaged time sample
+          for (sample = 0; sample < numSamplesToAverage; sample++) {
+            // Add each time sample in this averaged time sample to the (initially-empty) averaged time sample
+            std::transform(averagedData[averagedSample].begin(), averagedData[averagedSample].end(), data[averagedSample * nstride + sample].begin(), averagedData[averagedSample].begin(), std::plus<float>());
+          }
+          // Record how many time samples we've actually averaged
+          numberOfSamplesAveraged = numSamplesToAverage;
+        } else {
+          // Calculate the number of time samples remaining in this averaged time sample
+          numberOfTimeSamplesRemaining = data.size() - averagedSample * nstride - 1;
+          // Add together the remaining time samples in this averaged time sample
+          for (sample = 0; sample < numberOfTimeSamplesRemaining; sample++) {
+            // Add each time sample in this averaged time sample to the (initially-empty) averaged time sample
+            std::transform(averagedData[averagedSample].begin(), averagedData[averagedSample].end(), data[averagedSample * nstride + sample].begin(), averagedData[averagedSample].begin(), std::plus<float>());
+          }
+          // Record how many time samples we've actually averaged
+          numberOfSamplesAveraged = numberOfTimeSamplesRemaining;
+        }
+
+      } else { // If this isn't the last averaged time sample, there will necessarily be numSamplesToAverage time samples left
+        // Add together all numSamplesToAverage time samples in this averaged time sample
+        for (sample = 0; sample < numSamplesToAverage; sample++) {
+          // Add each time sample in this averaged time sample to the (initially-empty) averaged time sample
+          std::transform(averagedData[averagedSample].begin(), averagedData[averagedSample].end(), data[averagedSample * nstride + sample].begin(), averagedData[averagedSample].begin(), std::plus<float>());
+        }
+        // Record how many time samples we've actually averaged
+        numberOfSamplesAveraged = numSamplesToAverage;
+      }
+
+      // Calculate the mean of this averaged time sample by dividing the sum from above by the number of time samples actually added together
+      std::transform(averagedData[averagedSample].begin(), averagedData[averagedSample].end(), averagedData[averagedSample].begin(), std::bind(std::divides<float>(), std::placeholders::_1, (float) numberOfSamplesAveraged));
+
+      // Calculate the median and standard deviation of the channels in this averaged time sample
+      normalStats(averagedData[averagedSample], numChans, stats);
+
+      // Generate a random seed by generating a seed sequence starting with 8 random values
+      std::seed_seq randomSeed{generateRand(), generateRand(), generateRand(), generateRand(), generateRand(), generateRand(), generateRand(), generateRand()};
+      // Create a Mersenne twister based on the random seed generated above
+      std::mt19937 randomNumGenerator(randomSeed);
+      // Create a Gaussian distribution with the same median and standard deviation as the local averaged data
+      std::normal_distribution<float> distribution(stats[0], stats[1]);
+
+      // Clear the state (i.e. the error flags) of the mask file input stream (e.g. if the failbit is set because we tried to read past the end of the file on a previous read)
+      maskFile.clear();
+      // Set the input stream position to the beginning of the file
+      maskFile.seekg(0);
+
+      // Read each line of the mask file into the 'channel' variable
+      while (maskFile >> channel) {
+        // Replace this channel with Gaussian noise for all native samples in this averaged time sample
+        for (sample = 0; sample < nstride; sample++) {
+          data[averagedSample * nstride + sample][channel] = distribution(randomNumGenerator);
+        }
+      }
+
+    }
+
+    // Clean up
+    averagedData.clear();
+    maskFile.close();
+
+    std::cout << "done!" << std::endl;
+
+  } else if (maskFile) { // Replace channels to be masked with a constant value
+    std::cout << "Masking channels with constant value... " << std::flush;
     // Read each line of the mask file into the 'channel' variable
     while (maskFile >> channel) {
       // Mask the channel in each time sample
@@ -543,30 +641,34 @@ if (maskFile) { // Replace channels to be masked with a constant value
       }
     }
     maskFile.close();
+    std::cout << "done!" << std::endl;
   }
-// MAKE -M AND -N OPTIONS MUTUALLY EXCLUSIVE
 
   // Output .fil files
   outputFile.write(header, sizeof(char) * headerSize);
-// THIS WILL NEED EDITING SINCE DATA IS A VECTOR(VECTOR())
-//  switch (numBits) {
-//
-//    case 8:
-//    {
-//      std::vector<char> charBuffer(data.begin(), data.end());
-//      outputFile.write((char*) &charBuffer[0], sizeof(char) * numSamples * numChans);
-//      break;
-//    }
-//
-//    case 32:
-//      outputFile.write((char*) &data[0], sizeof(float) * numSamples * numChans);
-//      break;
-//
-//  }
+  switch (numBits) {
+
+    case 8:
+    {
+      for (sample = 0; sample < numSamples; sample++) {
+        std::vector<char> charBuffer(data[sample].begin(), data[sample].end());
+        outputFile.write((char*) &charBuffer[0], sizeof(char) * numChans);
+      }
+      break;
+    }
+
+    case 32:
+      for (sample = 0; sample < numSamples; sample++) {
+        outputFile.write((char*) &data[sample][0], sizeof(float) * numChans);
+      }
+      break;
+
+  }
   outputFile.close();
 
   // Clean up
   free(header);
+  data.clear();
 
   return 0;
 
